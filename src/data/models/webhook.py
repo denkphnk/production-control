@@ -1,9 +1,9 @@
 from sqlalchemy.orm import Mapped, mapped_column, relationship
-from sqlalchemy import DateTime, JSON, ForeignKey
+from sqlalchemy import DateTime, JSON, ForeignKey, ARRAY, String
 
 from datetime import datetime
 
-from core.database import Base
+from src.core.database import Base
 
 
 class WebhookSubscription(Base):
@@ -11,7 +11,7 @@ class WebhookSubscription(Base):
 
     id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
     url: Mapped[str] = mapped_column(nullable=False)
-    events: Mapped[list[str]] = mapped_column(nullable=False) # ["batch_created", "batch_closed"]
+    events: Mapped[list[str]] = mapped_column(ARRAY(String), nullable=False) # ["batch_created", "batch_closed"]
     secret_key: Mapped[str] = mapped_column(nullable=True)
     is_active: Mapped[bool] = mapped_column(default=True)
     retry_count: Mapped[int] = mapped_column(default=3)
