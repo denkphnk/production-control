@@ -430,23 +430,3 @@ class AggregateProduct(BaseModel):
         min_length=1,
         description='Уникальный код продукции'
     )
-
-data = {
-    "id": 1,
-    "is_closed": False,
-    "batch_number": 22222,
-    "batch_date": date(2024, 1, 30),
-    
-    # ✅ Добавляем недостающие поля из BatchBase
-    "task_description": "Изготовить 1000 болтов М10",
-    "work_center_id": 1,
-    "shift": "1 смена",
-    "team": "Бригада Иванова",
-    "nomenclature": "Болт М10х50",
-    "ekn_code": "EKN-12345",
-    "shift_start": datetime(2024, 1, 30, 8, 0, 0),
-    "shift_end": datetime(2024, 1, 30, 20, 0, 0),
-}
-
-obj = BatchBase(**data)
-print(repr(obj))
