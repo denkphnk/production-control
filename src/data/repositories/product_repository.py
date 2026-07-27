@@ -15,7 +15,7 @@ class ProductRepository(BaseRepository[Product]):
         super().__init__(Product, session)
 
     ##########################################
-    # ПОЛУЧЕНИЕ ПО UNIQUE_CODE
+    # ЧТЕНИЕ ПО UNIQUE_CODE
     ##########################################
     async def get_by_unique_code(
         self, unique_code: str, batch_id: int
@@ -29,7 +29,7 @@ class ProductRepository(BaseRepository[Product]):
         return res.scalar_one_or_none()
 
     ##########################################
-    # ПОЛУЧЕНИЕ ПО BATCH_ID
+    # ЧТЕНИЕ ПО BATCH_ID
     ##########################################
     async def get_by_batch_id(
         self, batch_id: int, offset: int = 0, limit: int = 20
