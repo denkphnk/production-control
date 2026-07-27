@@ -15,7 +15,7 @@ class ProductRepository(BaseRepository[Product]):
         super().__init__(Product, session)
 
     ##########################################
-    # ЧТЕНИЕ ПО UNIQUE_CODE
+    # ПОИСК ПО UNIQUE_CODE
     ##########################################
     async def get_by_unique_code(
         self, unique_code: str, batch_id: int
@@ -29,7 +29,7 @@ class ProductRepository(BaseRepository[Product]):
         return res.scalar_one_or_none()
 
     ##########################################
-    # ЧТЕНИЕ ПО BATCH_ID
+    # ПОИСК ПО BATCH_ID
     ##########################################
     async def get_by_batch_id(
         self, batch_id: int, offset: int = 0, limit: int = 20
@@ -51,7 +51,7 @@ class ProductRepository(BaseRepository[Product]):
         """Ищет аггрегированную продукцию по ID партии"""
         query = (
             select(self.model)
-            .where(self.model.batch_id == batch_id, self.model.is_aggregated == True)
+            .where(self.model.batch_id == batch_id, self.model.is_aggregated)
             .offset(offset)
             .limit(limit)
         )
@@ -65,7 +65,7 @@ class ProductRepository(BaseRepository[Product]):
         """Ищет неаггрегированную продукцию по ID партии"""
         query = (
             select(self.model)
-            .where(self.model.batch_id == batch_id, self.model.is_aggregated == False)
+            .where(self.model.batch_id == batch_id, not self.model.is_aggregated)
             .offset(offset)
             .limit(limit)
         )
@@ -88,7 +88,7 @@ class ProductRepository(BaseRepository[Product]):
             .where(
                 self.model.unique_code == unique_code,
                 self.model.batch_id == batch_id,
-                self.model.is_aggregated == False,
+                not self.model.is_aggregated,
             )
             .values(is_aggregated=True, aggregated_at=datetime.now(timezone.utc))
             .returning(self.model)
