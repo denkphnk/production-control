@@ -1,11 +1,12 @@
-from typing import Generic, TypeVar, Type, Optional, List, Dict, Any, Sequence
+from typing import Generic, TypeVar, Type, Optional, List, Dict, Any
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, update, delete, func
 
 from src.core.database import Base
 
 
-ModelType = TypeVar('ModelType', bound=Base)
+ModelType = TypeVar("ModelType", bound=Base)
+
 
 class BaseRepository(Generic[ModelType]):
     def __init__(self, model: Type[ModelType], session: AsyncSession):
@@ -13,7 +14,7 @@ class BaseRepository(Generic[ModelType]):
         self.session = session
 
     ##########################################
-    # СОЗДАНИЕ  
+    # СОЗДАНИЕ
     ##########################################
     async def create(self, data: Dict[str, Any]) -> ModelType:
         """Добавляет одну запись"""
@@ -30,9 +31,9 @@ class BaseRepository(Generic[ModelType]):
         self.session.add_all(instances)
         await self.session.flush()
         return instances
-    
+
     ##########################################
-    # ЧТЕНИЕ  
+    # ЧТЕНИЕ
     ##########################################
     async def get_by_id(self, id: int) -> Optional[ModelType]:
         """Получает запись по ID"""
@@ -40,7 +41,9 @@ class BaseRepository(Generic[ModelType]):
         result = await self.session.execute(query)
         return result.scalar_one_or_none()
 
-    async def get_all(self, offset: int = 0, limit: int = 100, **filters) -> List[ModelType]:
+    async def get_all(
+        self, offset: int = 0, limit: int = 100, **filters
+    ) -> List[ModelType]:
         """Получает записи по фильтрам с пагинацией"""
         query = select(self.model)
 
@@ -104,7 +107,9 @@ class BaseRepository(Generic[ModelType]):
 
         return result.scalar_one_or_none()
 
-    async def update_many(self, ids: List[int], data: Dict[str, Any]) -> List[ModelType]:
+    async def update_many(
+        self, ids: List[int], data: Dict[str, Any]
+    ) -> List[ModelType]:
         """Обновляет несколько записей по ID"""
         query = (
             update(self.model)
@@ -117,7 +122,7 @@ class BaseRepository(Generic[ModelType]):
         await self.session.flush()
 
         return result.scalars().all()
-    
+
     ##########################################
     # УДАЛЕНИЕ
     ##########################################
