@@ -74,7 +74,7 @@ class ProductRepository(BaseRepository[Product]):
         return res.scalars().all()
 
     ##########################################
-    # АГГРЕГАЦИЯ
+    # АГРЕГАЦИЯ
     ##########################################
     async def _aggregate_single_product(
         self, unique_code: str, batch_id: int

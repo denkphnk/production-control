@@ -11,7 +11,7 @@ class Product(Base):
     unique_code: Mapped[int] = mapped_column(unique=True, nullable=False, index=True)
     batch_id: Mapped[int] = mapped_column(ForeignKey('batches.id'), nullable=False, index=True)
 
-    # Аггрегация
+    # Агрегация
     is_aggregated: Mapped[bool] = mapped_column(default=False, index=True)
     aggregated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=True)
 
