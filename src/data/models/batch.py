@@ -4,6 +4,9 @@ from src.core.database import Base
 
 from datetime import datetime
 
+from src.data.models.product import Product
+from src.data.models.workcenter import WorkCenter
+
 class Batch(Base):
     __tablename__ = 'batches'
 
