@@ -16,6 +16,11 @@ class WebhookSubscription(Base):
     is_active: Mapped[bool] = mapped_column(default=True)
     retry_count: Mapped[int] = mapped_column(default=3)
     timeout: Mapped[int] = mapped_column(default=10) # секунды
+    webhook_deliveries: Mapped[list["WebhookDelivery"]] = relationship(
+        back_populates="subscription",
+        cascade="all, delete-orphan",
+        lazy="selectin"
+    )
 
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=datetime.now)
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=datetime.now, onupdate=datetime.now)
