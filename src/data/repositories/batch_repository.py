@@ -1,4 +1,5 @@
 from typing import Optional, List, Dict, Any, Tuple
+from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import String, cast, func, or_, select
 
 from datetime import datetime, timezone, date
@@ -14,7 +15,7 @@ from src.data.repositories.base_repository import BaseRepository
 class BatchRepository(BaseRepository[Batch]):
     """Класс для партий"""
 
-    def __init__(self, session):
+    def __init__(self, session: AsyncSession):
         super().__init__(Batch, session)
 
     ##########################################
