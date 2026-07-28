@@ -1,8 +1,7 @@
 from typing import Optional, List, Dict, Any, Tuple
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import func, insert, select, update
+from sqlalchemy import func, select
 
-from datetime import datetime, timezone
 
 from sqlalchemy.orm import selectinload
 
