@@ -2,10 +2,10 @@ from typing import List, Optional
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from src.api.v1.schemas.batch import ProductCreate
 from src.data.models.product import Product
 from src.data.repositories.batch_repository import BatchRepository
 from src.data.repositories.product_repository import ProductRepository
+from src.domain.schemas.product import ProductCreate
 
 
 class ProductService:

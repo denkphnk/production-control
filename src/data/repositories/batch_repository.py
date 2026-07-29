@@ -169,23 +169,25 @@ class BatchRepository(BaseRepository[Batch]):
     ##########################################
     async def get_list_by_filters(
         self,
-        is_closed: bool = None,
-        batch_number: int = None,
-        batch_date: date = None,
-        work_center_id: int = None,
-        work_center_identifier: str = None,
-        shift: str = None,
-        team: str = None,
-        nomenclature: str = None,
-        ekn_code: str = None,
-        date_from: date = None,
-        date_to: date = None,
-        offset: int = 0,
-        limit: int = 20,
+        data: Dict[str, Any]
     ) -> Tuple[List[Batch], int]:
         """Возвращает список партий с динамическими фильтрами и пагинацией"""
         query = select(self.model)
         total_query = select(func.count()).select_from(self.model)
+
+        is_closed = data.get("is_closed")
+        batch_number = data.get("batch_number")
+        batch_date = data.get("batch_date")
+        work_center_id = data.get("work_center_id")
+        work_center_identifier = data.get("work_center_identifier")
+        shift = data.get("shift")
+        team = data.get("team")
+        nomenclature = data.get("nomenclature")
+        ekn_code = data.get("ekn_code")
+        date_from = data.get("date_from")
+        date_to = data.get("date_to")
+        offset = data.get("offset", 0)
+        limit = data.get("limit", 20)
 
         # Точные совпадения
         if is_closed is not None:
