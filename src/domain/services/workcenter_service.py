@@ -5,8 +5,10 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from src.data.models.workcenter import WorkCenter
 from src.data.repositories.workcenter_repository import WorkCenterRepository
 
+
 class WorkCenterService:
     """Сервис для работы с РЦ"""
+
     def __init__(self, session: AsyncSession):
         self.session = session
         self.wc_repo = WorkCenterRepository(session)
