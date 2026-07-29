@@ -4,6 +4,8 @@ from src.core.database import Base
 
 from datetime import datetime
 
+from src.data.models.batch import Batch
+
 class Product(Base):
     __tablename__ = 'products'
     id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
