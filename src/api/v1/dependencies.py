@@ -1,0 +1,38 @@
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from fastapi import Depends
+
+from src.domain.services.batch_service import BatchService
+from src.domain.services.product_service import ProductService
+from src.domain.services.workcenter_service import WorkCenterService
+from src.domain.services.webhook_service import WebhookService
+from src.core.database import AsyncSessionLocal
+
+
+async def get_db():
+    async with AsyncSessionLocal() as session:
+        yield session
+
+
+async def get_batch_service(
+        session: AsyncSession = Depends(get_db)
+) -> BatchService:
+    return BatchService(session)
+
+
+async def get_product_service(
+    session: AsyncSession = Depends(get_db),
+) -> ProductService:
+    return ProductService(session)
+
+
+async def get_workcenter_service(
+    session: AsyncSession = Depends(get_db),
+) -> WorkCenterService:
+    return WorkCenterService(session)
+
+
+async def get_webhook_service(
+    session: AsyncSession = Depends(get_db),
+) -> WebhookService:
+    return WebhookService(session)
