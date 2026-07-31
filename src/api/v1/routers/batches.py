@@ -15,13 +15,13 @@ from src.api.v1.schemas.batch import (
 
 from src.domain.services.batch_service import BatchService
 
-router = APIRouter(prefix="/api/v1/batches", tags=["batches"])
+batches_router = APIRouter(prefix="/api/v1/batches", tags=["batches"])
 
 
 ##########################################
 # ЧТЕНИЕ
 ##########################################
-@router.get(
+@batches_router.get(
     "/{batch_id}",
     response_model=BatchDetailResponse,
     responses={404: {"description": "Batch not found"}},
@@ -39,7 +39,7 @@ async def get_batch(batch_id: int, service: BatchService = Depends(get_batch_ser
 ##########################################
 # ПОИСК С ДИНАМИЧЕСКОЙ ФИЛЬТРАЦИЕЙ
 ##########################################
-@router.get(
+@batches_router.get(
     "/",
     response_model=PaginatedBatchResponse,
     responses={404: {"description": "Batch not found"}},
@@ -55,7 +55,7 @@ async def list_batches(
         BatchListItemResponse.model_validate(batch) for batch in batches
     ]
 
-    return PaginatedBatchResponse(
+    return PaginatedBatchResponse.create(
         items=response_batches, total=total, offset=data.offset, limit=data.limit
     )
 
@@ -63,7 +63,7 @@ async def list_batches(
 ##########################################
 # СТАТИСТИКА
 ##########################################
-@router.get(
+@batches_router.get(
     "/{batch_id}/statistics",
     response_model=BatchStatisticsResponse,
     status_code=status.HTTP_200_OK,
@@ -81,7 +81,7 @@ async def get_statistics(
 ##########################################
 # СОЗДАНИЕ ПАРТИИ
 ##########################################
-@router.post(
+@batches_router.post(
     "/", response_model=BatchDetailResponse, status_code=status.HTTP_201_CREATED
 )
 async def create_batch(
@@ -99,7 +99,7 @@ async def create_batch(
 ##########################################
 # ЗАКРЫТИЕ ПАРТИИ
 ##########################################
-@router.post(
+@batches_router.post(
     "/{batch_id}/close",
     response_model=BatchDetailResponse,
     status_code=status.HTTP_200_OK,
@@ -119,7 +119,7 @@ async def close_batch(
 ##########################################
 # АГРЕГАЦИЯ
 ##########################################
-@router.post(
+@batches_router.post(
     "/{batch_id}/aggregate",
     response_model=ProductInBatchResponse,
     status_code=status.HTTP_200_OK,
@@ -141,7 +141,7 @@ async def aggregate_product(
 ##########################################
 # ОБНОВЛЕНИЕ
 ##########################################
-@router.patch(
+@batches_router.patch(
     "/{batch_id}", response_model=BatchDetailResponse, status_code=status.HTTP_200_OK
 )
 async def update_batch(

@@ -1,4 +1,6 @@
-from sqlalchemy.orm import Mapped, mapped_column
+from typing import List
+
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy import DateTime
 from src.core.database import Base
 
@@ -12,3 +14,6 @@ class WorkCenter(Base):
     name: Mapped[str] = mapped_column(nullable=False)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=datetime.now)
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=datetime.now, onupdate=datetime.now)
+    batches: Mapped[List["Batch"]] = relationship(
+        back_populates="work_center"
+    )
