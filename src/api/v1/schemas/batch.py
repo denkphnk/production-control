@@ -162,6 +162,23 @@ class BatchDetailResponse(BaseModel):
     )
 
 
+class BatchStatisticsResponse(BaseModel):
+    """Схема для статистики агрегации по партии"""
+
+    total_products: int = Field(
+        ..., ge=0, description="Общее количество продукции в партии"
+    )
+    aggregated: int = Field(
+        ..., ge=0, description="Количество агрегированной продукции"
+    )
+    remaining: int = Field(
+        ..., ge=0, description="Количество неагрегированной продукции"
+    )
+    aggregation_rate: float = Field(
+        ..., ge=0.0, le=100.0, description="Процент агрегации (0-100)"
+    )
+
+
 ##########################################
 # СПИСОК ПАРТИЙ С ФИЛЬТРАЦИЕЙ
 ##########################################

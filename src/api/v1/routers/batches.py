@@ -1,0 +1,156 @@
+from fastapi import APIRouter, Depends, HTTPException, status
+
+from src.api.v1.dependencies import get_batch_service
+from src.api.v1.schemas.batch import (
+    BatchCreate,
+    BatchDetailResponse,
+    BatchListItemResponse,
+    BatchListRequest,
+    BatchStatisticsResponse,
+    BatchUpdate,
+    PaginatedBatchResponse,
+    AggregateProduct,
+    ProductInBatchResponse,
+)
+
+from src.domain.services.batch_service import BatchService
+
+router = APIRouter(prefix="/api/v1/batches", tags=["batches"])
+
+
+##########################################
+# ЧТЕНИЕ
+##########################################
+@router.get(
+    "/{batch_id}",
+    response_model=BatchDetailResponse,
+    responses={404: {"description": "Batch not found"}},
+)
+async def get_batch(batch_id: int, service: BatchService = Depends(get_batch_service)):
+    """Получение партии по ID"""
+    batch = await service.get_by_id(batch_id)
+    if not batch:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Batch not found"
+        )
+    return BatchDetailResponse.model_validate(batch)
+
+
+##########################################
+# ПОИСК С ДИНАМИЧЕСКОЙ ФИЛЬТРАЦИЕЙ
+##########################################
+@router.get(
+    "/",
+    response_model=PaginatedBatchResponse,
+    responses={404: {"description": "Batch not found"}},
+)
+async def list_batches(
+    data: BatchListRequest = Depends(),
+    service: BatchService = Depends(get_batch_service),
+):
+    """Возвращает список партий с динамическими фильтрами и пагинацией"""
+    batches, total = await service.get_list(data)
+
+    response_batches = [
+        BatchListItemResponse.model_validate(batch) for batch in batches
+    ]
+
+    return PaginatedBatchResponse(
+        items=response_batches, total=total, offset=data.offset, limit=data.limit
+    )
+
+
+##########################################
+# СТАТИСТИКА
+##########################################
+@router.get(
+    "/{batch_id}/statistics",
+    response_model=BatchStatisticsResponse,
+    status_code=status.HTTP_200_OK,
+)
+async def get_statistics(
+    batch_id: int, service: BatchService = Depends(get_batch_service)
+):
+    """Возвращает статистику агрегации"""
+
+    stats = await service.get_statistics(batch_id)
+    response_stats = BatchStatisticsResponse(**stats)
+    return response_stats
+
+
+##########################################
+# СОЗДАНИЕ ПАРТИИ
+##########################################
+@router.post(
+    "/", response_model=BatchDetailResponse, status_code=status.HTTP_201_CREATED
+)
+async def create_batch(
+    data: BatchCreate, service: BatchService = Depends(get_batch_service)
+):
+    """Создание новой партии"""
+    try:
+        batch = await service.create(data)
+        response_batch = BatchDetailResponse.model_validate(batch)
+        return response_batch
+    except ValueError as e:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+
+
+##########################################
+# ЗАКРЫТИЕ ПАРТИИ
+##########################################
+@router.post(
+    "/{batch_id}/close",
+    response_model=BatchDetailResponse,
+    status_code=status.HTTP_200_OK,
+)
+async def close_batch(
+    batch_id: int, service: BatchService = Depends(get_batch_service)
+):
+    """Закрывает партию"""
+    try:
+        batch = await service.close_batch(batch_id)
+        response_batch = BatchDetailResponse.model_validate(batch)
+        return response_batch
+    except ValueError as e:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+
+
+##########################################
+# АГРЕГАЦИЯ
+##########################################
+@router.post(
+    "/{batch_id}/aggregate",
+    response_model=ProductInBatchResponse,
+    status_code=status.HTTP_200_OK,
+)
+async def aggregate_product(
+    batch_id: int,
+    data: AggregateProduct,
+    service: BatchService = Depends(get_batch_service),
+):
+    """Агрегирует продукцию"""
+    try:
+        product = await service.aggregate_product(batch_id, data.unique_code)
+        response_product = ProductInBatchResponse.model_validate(product)
+        return response_product
+    except ValueError as e:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+
+
+##########################################
+# ОБНОВЛЕНИЕ
+##########################################
+@router.patch(
+    "/{batch_id}", response_model=BatchDetailResponse, status_code=status.HTTP_200_OK
+)
+async def update_batch(
+    batch_id: int, data: BatchUpdate, service: BatchService = Depends(get_batch_service)
+):
+    """Обновляет партию"""
+    try:
+        batch = await service.update(batch_id, data)
+        response_batch = BatchDetailResponse.model_validate(batch)
+        return response_batch
+    except ValueError as e:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
