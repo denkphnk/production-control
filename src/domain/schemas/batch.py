@@ -1,12 +1,145 @@
 ##########################################
 # СПИСОК ПАРТИЙ С ФИЛЬТРАЦИЕЙ
 ##########################################
-from datetime import date
+from datetime import date, datetime
 from typing import Optional
 
-from pydantic import BaseModel, ConfigDict, Field, field_validator
+from pydantic import BaseModel, ConfigDict, Field, ValidationInfo, field_validator
 
 
+##########################################
+# БАЗОВАЯ СХЕМА ПАРТИИ
+##########################################
+class BatchBase(BaseModel):
+    """
+    Базовая схема Batch с общими полями
+    """
+
+    task_description: str = Field(
+        ..., min_length=1, max_length=1000, description="Описание задания"
+    )
+    work_center_id: int = Field(..., ge=1, description="ID рабочего центра")
+    shift: str = Field(..., min_length=1, max_length=50, description="Номер смены")
+    team: str = Field(..., min_length=1, max_length=50, description="Название бригады")
+    batch_number: int = Field(..., ge=1, description="Номер партии")
+    batch_date: date = Field(..., description="Дата партии")
+    nomenclature: str = Field(
+        ..., min_length=1, max_length=200, description="Наименование продукта"
+    )
+    ekn_code: str = Field(..., min_length=1, max_length=50, description="Код ЕКН")
+    shift_start: datetime = Field(..., description="Дата и время начала смены")
+    shift_end: datetime = Field(..., description="Дата и время окончания смены")
+
+    model_config = ConfigDict(from_attributes=True, str_strip_whitespace=True)
+
+    ##########################################
+    # ВАЛИДАЦИЯ
+    ##########################################
+
+    @field_validator("shift_end")
+    @classmethod
+    def validate_shift_end(cls, v: datetime, info: ValidationInfo) -> datetime:
+        """Проверяет, что окончание смены позже начала"""
+        start = info.data.get("shift_start")
+        if start >= v:
+            raise ValueError("shift_end should be after shift_start")
+        return v
+
+    @field_validator("batch_date")
+    @classmethod
+    def validate_batch_date(cls, v: date):
+        if v > date.today():
+            raise ValueError("batch_date cannot be in the future")
+        return v
+
+    @field_validator("ekn_code")
+    @classmethod
+    def validate_ekn_code(cls, v: str) -> str:
+        import re
+
+        if not re.match(r"^[A-Z]{3}-\d{5}$", v):
+            raise ValueError('EKN code must be like "ABC-12345"')
+        return v.upper()
+
+
+##########################################
+# СОЗДАНИЕ ПАРТИИ
+##########################################
+class BatchCreate(BatchBase):
+    """
+    Схема для создания партии
+    Используется в POST /api/v1/batches
+    """
+
+    is_closed: bool = Field(default=False, description="Статус закрытия смены")
+
+
+##########################################
+# ОБНОВЛЕНИЕ ПАРТИИ
+##########################################
+class BatchUpdate(BaseModel):
+    """
+    Схема для обновления партии
+    Используется в PATCH /api/v1/batches/{batch_id}
+    """
+
+    is_closed: Optional[bool] = Field(None, description="Статус закрытия партии")
+    task_description: Optional[str] = Field(
+        None, min_length=1, max_length=1000, description="Описание задания"
+    )
+    work_center_id: Optional[int] = Field(None, ge=1, description="ID рабочего центра")
+    shift: Optional[str] = Field(
+        None, min_length=1, max_length=50, description="Номер смены"
+    )
+    team: Optional[str] = Field(
+        None, min_length=1, max_length=50, description="Название бригады"
+    )
+    batch_number: Optional[int] = Field(None, ge=1, description="Номер партии")
+    batch_date: Optional[date] = Field(None, description="Дата партии")
+    nomenclature: Optional[str] = Field(
+        None, min_length=1, max_length=200, description="Наименование продукта"
+    )
+    ekn_code: Optional[str] = Field(
+        None, min_length=1, max_length=50, description="Код ЕКН"
+    )
+    shift_start: Optional[datetime] = Field(
+        None, description="Дата и время начала смены"
+    )
+    shift_end: Optional[datetime] = Field(
+        None, description="Дата и время окончания смены"
+    )
+
+    model_config = ConfigDict(from_attributes=True, str_strip_whitespace=True)
+
+    ##########################################
+    # ВАЛИДАЦИЯ
+    ##########################################
+
+    @field_validator("shift_end")
+    @classmethod
+    def validate_shift_end(
+        cls, v: Optional[datetime], info: ValidationInfo
+    ) -> Optional[datetime]:
+        """Проверяет, что окончание смены позже начала"""
+        if v is not None:
+            start = info.data.get("shift_start")
+            if start is not None:
+                if start >= v:
+                    raise ValueError("shift_end should be after shift_start")
+        return v
+
+    @field_validator("batch_date")
+    @classmethod
+    def validate_batch_date(cls, v: Optional[date]) -> Optional[date]:
+        if v is not None:
+            if v > date.today():
+                raise ValueError("batch_date cannot be in the future")
+        return v
+
+
+##########################################
+# СПИСОК ПАРТИЙ С ФИЛЬТРАЦИЕЙ
+##########################################
 class BatchFilters(BaseModel):
     """
     Фильтры для списка партий.
