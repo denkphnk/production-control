@@ -77,3 +77,10 @@ class ProductService:
         return await self.product_repo.get_not_aggregated_by_batch_id(
             batch_id, offset, limit
         )
+
+    ##########################################
+    # ПОДСЧЕТ ПО BATCH_ID
+    ##########################################
+    async def count_by_batch_id(self, batch_id: int) -> int:
+        """Считает всю продукцию по ID партии"""
+        return await self.product_repo.count(batch_id=batch_id)
