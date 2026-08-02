@@ -27,7 +27,7 @@ class BatchService:
     ##########################################
     async def get_by_id(self, batch_id: int) -> Optional[Batch]:
         """Получает партию по ID"""
-        return await self.batch_repo.get_by_id(batch_id)
+        return await self.batch_repo.get_by_id_with_relations(batch_id)
 
     ##########################################
     # ПОИСК С ДИНАМИЧЕСКОЙ ФИЛЬТРАЦИЕЙ
@@ -43,7 +43,9 @@ class BatchService:
     async def create(self, data: BatchCreate) -> Batch:
         """Создает партию"""
         is_unique = await self.batch_repo.is_batch_number_unique(
-            data.batch_number, data.batch_date
+            batch_number=data.batch_number, 
+            batch_date=data.batch_date,
+            exclude_id=None
         )
         if not is_unique:
             raise ValueError(
@@ -69,6 +71,7 @@ class BatchService:
                     "nomenclature": batch.nomenclature,
                     "work_center": wc.name if wc else None,
                 },
+                async_mode=False
             )
             return batch
 

@@ -161,6 +161,7 @@ class BatchDetailResponse(BaseModel):
         default_factory=list, description="Список продукции"
     )
 
+    model_config = ConfigDict(from_attributes=True)
 
 class BatchStatisticsResponse(BaseModel):
     """Схема для статистики агрегации по партии"""
