@@ -4,12 +4,13 @@ import hmac
 import json
 import httpx
 
-from typing import Any, Dict, Optional
+from typing import Any, Dict, List, Optional, Tuple
 from datetime import datetime, timezone
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from src.data.models.webhook import WebhookSubscription
+from src.domain.schemas.webhook import WebhookCreate, WebhookUpdate
+from src.data.models.webhook import WebhookDelivery, WebhookSubscription
 from src.data.repositories.webhook_repository import WebhookRepository
 
 
@@ -20,6 +21,84 @@ class WebhookService:
         self.session = session
         self.webhook_repo = WebhookRepository(session)
         self.http_client = httpx.AsyncClient(timeout=10.0)
+
+    async def get_by_id(self, subscription_id: int) -> WebhookSubscription:
+        return await self.webhook_repo.get_by_id(subscription_id)
+
+
+    ##########################################
+    # СОЗДАНИЕ ПОДПИСКИ
+    ##########################################
+    async def create(self, data: WebhookCreate) -> WebhookSubscription:
+        """Создает подписку"""
+        data = data.model_dump()
+
+        existing = await self.webhook_repo.get_by_url(data["url"])
+        if existing:
+            raise ValueError(f"Webhook with URL {data.url} already exists")
+        try:
+            subscription = await self.webhook_repo.create(data)
+            self.session.commit()
+            self.session.refresh()
+            return subscription
+        except Exception:
+            await self.session.rollback()
+            raise
+
+    ##########################################
+    # ПОЛУЧЕНИЕ ВСЕХ ПОДПИСОК
+    ##########################################
+    async def get_all(self, offset: int = 0, limit: int = 20) -> Tuple[List[WebhookSubscription], int]:
+        """Возвращает список всех подписок."""
+        return await self.webhook_repo.get_all_with_count(offset, limit)
+
+    ##########################################
+    # ОБНОВЛЕНИЕ ПОДПИСКИ
+    ##########################################
+    async def update(self, subscription_id: int, data: WebhookUpdate) -> Optional[WebhookSubscription]:
+        """Обновляет подписку."""
+        existing = await self.webhook_repo.get_by_id(subscription_id)
+        if not existing:
+            return None
+
+        update_data = data.model_dump(exclude_unset=True)
+
+        if "url" in update_data:
+            url_exists = await self.webhook_repo.get_by_url(update_data["url"])
+            if url_exists and url_exists.id != subscription_id:
+                raise ValueError(f"Webhook with URL {update_data['url']} already exists")
+
+        try:
+            subscription = await self.webhook_repo.update(subscription_id, update_data)
+            await self.session.commit()
+            await self.session.refresh(subscription)
+            return subscription
+        except Exception:
+            await self.session.rollback()
+            raise
+
+    ##########################################
+    # УДАЛЕНИЕ ПОДПИСКИ
+    ##########################################
+    async def delete(self, subscription_id: int) -> bool:
+        """Удаляет подписку."""
+        deleted = await self.webhook_repo.delete(subscription_id)
+        await self.session.commit()
+        return deleted
+
+    ##########################################
+    # ИСТОРИЯ ДОСТАВОК
+    ##########################################
+    async def get_deliveries(
+        self,
+        subscription_id: int,
+        offset: int = 0,
+        limit: int = 20
+    ) -> Tuple[List[WebhookDelivery], int]:
+        """Возвращает историю доставок для подписки."""
+        return await self.webhook_repo.get_deliveries_for_subscription(
+            subscription_id, offset, limit
+        )
 
     async def send_event(
         self, event_type: str, payload: Dict[str, Any], async_mode: bool

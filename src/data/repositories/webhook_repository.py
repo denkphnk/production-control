@@ -112,3 +112,18 @@ class WebhookRepository(BaseRepository[WebhookSubscription]):
 
         res = await self.session.execute(query)
         return res.unique().scalar_one_or_none()
+
+    ##########################################
+    # СПИСОК ДОСТАВОК
+    ##########################################
+    async def get_all_with_count(
+        self, offset: int = 0, limit: int = 20
+    ) -> Tuple[List[WebhookSubscription], int]:
+        """Отдает список всех подписок с подсчетом"""
+        query = select(self.model).offset(offset).limit(limit)
+        total_query = select(func.count()).select_from(self.model)
+
+        res = await self.session.execute(query)
+        total = await self.session.execute(total_query)
+
+        return res.scalars().all(), total.scalar()
