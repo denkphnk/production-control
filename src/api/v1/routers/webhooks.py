@@ -13,7 +13,7 @@ from src.api.v1.schemas.webhook import (
 from src.domain.services.webhook_service import WebhookService
 
 
-webhook_router = APIRouter(prefix="api/v1/webhooks", tags=["webhook"])
+webhook_router = APIRouter(prefix="/api/v1/webhooks", tags=["webhook"])
 
 
 @webhook_router.post(

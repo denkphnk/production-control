@@ -84,7 +84,7 @@ class BatchService:
     ##########################################
     async def update(self, batch_id: int, data: BatchUpdate) -> Batch:
         """Обновляет партию"""
-        batch = await self.get_by_id(batch_id)
+        batch = await self.batch_repo.get_by_id_with_relations(batch_id)
         if not batch:
             raise ValueError(f"Batch with ID {batch_id} not found")
 
@@ -128,7 +128,9 @@ class BatchService:
                     "batch_number": batch.batch_number,
                     "changes": update_data,
                 },
+                async_mode=False
             )
+            return batch
         except Exception:
             await self.session.rollback()
             raise

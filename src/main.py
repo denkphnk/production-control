@@ -1,9 +1,13 @@
 from fastapi import FastAPI
 
 from src.api.v1.routers.batches import batches_router
+from src.api.v1.routers.products import products_router
+from src.api.v1.routers.webhooks import webhook_router
 
 app = FastAPI(title='Production Control API', version='1.0.0')
 app.include_router(batches_router)
+app.include_router(products_router)
+app.include_router(webhook_router)
 
 @app.get('/health')
 async def health_check():

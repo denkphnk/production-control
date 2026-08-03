@@ -150,6 +150,8 @@ async def update_batch(
     """Обновляет партию"""
     try:
         batch = await service.update(batch_id, data)
+        if batch is None:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Batch with ID {batch_id} not found")
         response_batch = BatchDetailResponse.model_validate(batch)
         return response_batch
     except ValueError as e:

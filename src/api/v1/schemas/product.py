@@ -41,3 +41,7 @@ class PaginatedProductResponse(BaseModel):
             limit=limit,
             has_more=len(items) + offset < total,
         )
+
+class PaginationParams(BaseModel):
+    offset: int = Field(default=0, description='Смещение')
+    limit: int = Field(default=20, description='Лимит')
