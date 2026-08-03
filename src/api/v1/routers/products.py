@@ -27,7 +27,6 @@ async def product_get(
 ):
     """Получает продукцию"""
     try:
-        # TODO: написать метод в сервисе для получения списка продукции с подсчетом
         items = await service.get_by_batch_id(
             batch_id=batch_id, offset=pagination.offset, limit=pagination.limit
         )
