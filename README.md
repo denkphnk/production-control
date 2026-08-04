@@ -1,4 +1,4 @@
-```markdown
+markdown
 # 🏭 Production Control System
 
 Система управления производственными партиями и продукцией.
