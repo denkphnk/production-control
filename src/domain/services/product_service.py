@@ -34,6 +34,10 @@ class ProductService:
                 f"Product with unique_code {data.unique_code} already exists in this batch"
             )
 
+        if batch.is_closed:
+            raise ValueError(f"Batch with ID {data.batch_id} is closed")
+
+
         try:
             product_data = data.model_dump()
             product = await self.product_repo.create(product_data)
