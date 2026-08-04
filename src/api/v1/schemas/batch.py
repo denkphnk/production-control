@@ -3,6 +3,8 @@ from typing import List, Optional
 from pydantic import BaseModel, ConfigDict, Field, ValidationInfo, field_validator
 from datetime import datetime, date
 
+from src.api.v1.schemas.workcenter import WorkCenterInBatchResponse
+
 
 ##########################################
 # ПРОДУКЦИЯ В ПАРТИИ
@@ -11,7 +13,7 @@ class ProductInBatchResponse(BaseModel):
     """Продукция в партии"""
 
     id: int = Field(..., ge=1, description="ID продукции")
-    unique_code: str = Field(..., min_length=1, description="Уникальный код продукции")
+    unique_code: int = Field(..., ge=1, description="Уникальный код продукции")
     is_aggregated: bool = Field(..., description="Статус агрегации")
     aggregated_at: Optional[datetime] = Field(None, description="Дата агрегации")
 
@@ -163,6 +165,23 @@ class BatchDetailResponse(BaseModel):
 
     model_config = ConfigDict(from_attributes=True)
 
+class BatchFullResponse(BatchDetailResponse):
+    """Полная информация о партии (для GET и PATCH)."""
+    task_description: str
+    work_center_id: int
+    shift: str
+    team: str
+    nomenclature: str
+    ekn_code: str
+    shift_start: datetime
+    shift_end: datetime
+    closed_at: Optional[datetime]
+    created_at: datetime
+    updated_at: datetime
+    work_center: Optional[WorkCenterInBatchResponse] = None
+    
+    model_config = ConfigDict(from_attributes=True)
+
 class BatchStatisticsResponse(BaseModel):
     """Схема для статистики агрегации по партии"""
 
@@ -263,4 +282,4 @@ class AggregateProduct(BaseModel):
     Используется в POST /api/v1/batches/{batch_id}/aggregate
     """
 
-    unique_code: str = Field(..., min_length=1, description="Уникальный код продукции")
+    unique_code: int = Field(..., ge=1, description="Уникальный код продукции")

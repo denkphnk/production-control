@@ -26,6 +26,9 @@ reportlab = "^4.0.0"
 minio = "^7.2.0"
 flower = "^2.0.1"
 cryptography = "^43.0.0"
+pytest = "^9.1.1"
+pytest-dotenv = "^0.5.2"
+pytest-asyncio = "^1.4.0"
 
 [tool.poetry.group.dev.dependencies]
 pytest = "^9.0.0"

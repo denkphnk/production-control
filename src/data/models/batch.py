@@ -1,8 +1,8 @@
 from sqlalchemy.orm import Mapped, mapped_column, relationship
-from sqlalchemy import DateTime, UniqueConstraint, Index, ForeignKey
+from sqlalchemy import Date, DateTime, UniqueConstraint, Index, ForeignKey
 from src.core.database import Base
 
-from datetime import datetime
+from datetime import date, datetime
 
 from src.data.models.workcenter import WorkCenter
 
@@ -23,7 +23,7 @@ class Batch(Base):
 
     # Идентификация партии
     batch_number: Mapped[int] = mapped_column(nullable=False, index=True)
-    batch_date: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, index=True)
+    batch_date: Mapped[date] = mapped_column(Date, nullable=False, index=True)
 
     # Продукция
     nomenclature: Mapped[str] = mapped_column(nullable=False)

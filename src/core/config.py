@@ -17,6 +17,7 @@ class Settings(BaseSettings):
     MINIO_SECURE: bool
     MINIO_ROOT_USER: str
     MINIO_ROOT_PASSWORD: str
+    ENVIRONMENT: str
 
     model_config = SettingsConfigDict(env_file='.env')
 

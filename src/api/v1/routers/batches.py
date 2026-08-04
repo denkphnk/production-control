@@ -4,6 +4,7 @@ from src.api.v1.dependencies import get_batch_service
 from src.api.v1.schemas.batch import (
     BatchCreate,
     BatchDetailResponse,
+    BatchFullResponse,
     BatchListItemResponse,
     BatchListRequest,
     BatchStatisticsResponse,
@@ -23,7 +24,7 @@ batches_router = APIRouter(prefix="/api/v1/batches", tags=["batches"])
 ##########################################
 @batches_router.get(
     "/{batch_id}",
-    response_model=BatchDetailResponse,
+    response_model=BatchFullResponse,
     responses={404: {"description": "Batch not found"}},
 )
 async def get_batch(batch_id: int, service: BatchService = Depends(get_batch_service)):
@@ -33,7 +34,7 @@ async def get_batch(batch_id: int, service: BatchService = Depends(get_batch_ser
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail="Batch not found"
         )
-    return BatchDetailResponse.model_validate(batch)
+    return BatchFullResponse.model_validate(batch)
 
 
 ##########################################
@@ -101,7 +102,7 @@ async def create_batch(
 ##########################################
 @batches_router.post(
     "/{batch_id}/close",
-    response_model=BatchDetailResponse,
+    response_model=BatchFullResponse,
     status_code=status.HTTP_200_OK,
 )
 async def close_batch(
@@ -110,9 +111,11 @@ async def close_batch(
     """Закрывает партию"""
     try:
         batch = await service.close_batch(batch_id)
-        response_batch = BatchDetailResponse.model_validate(batch)
+        response_batch = BatchFullResponse.model_validate(batch)
         return response_batch
     except ValueError as e:
+        if "not found" in str(e).lower():
+            raise HTTPException(404, detail=str(e))
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
 
 
@@ -132,7 +135,9 @@ async def aggregate_product(
     """Агрегирует продукцию"""
     try:
         product = await service.aggregate_product(batch_id, data.unique_code)
-        response_product = ProductInBatchResponse.model_validate(product)
+        if product is None:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND)
+        response_product = ProductInBatchResponse.model_validate(product, from_attributes=True)
         return response_product
     except ValueError as e:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
@@ -142,7 +147,7 @@ async def aggregate_product(
 # ОБНОВЛЕНИЕ
 ##########################################
 @batches_router.patch(
-    "/{batch_id}", response_model=BatchDetailResponse, status_code=status.HTTP_200_OK
+    "/{batch_id}", response_model=BatchFullResponse, status_code=status.HTTP_200_OK
 )
 async def update_batch(
     batch_id: int, data: BatchUpdate, service: BatchService = Depends(get_batch_service)
@@ -152,7 +157,7 @@ async def update_batch(
         batch = await service.update(batch_id, data)
         if batch is None:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Batch with ID {batch_id} not found")
-        response_batch = BatchDetailResponse.model_validate(batch)
+        response_batch = BatchFullResponse.model_validate(batch)
         return response_batch
     except ValueError as e:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))

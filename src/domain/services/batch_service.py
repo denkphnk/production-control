@@ -62,6 +62,8 @@ class BatchService:
             await self.session.commit()
             await self.session.refresh(batch)
 
+            batch_with_relations = await self.batch_repo.get_by_id_with_relations(batch.id)
+
             await self.webhook_service.send_event(
                 "batch_created",
                 {
@@ -73,7 +75,7 @@ class BatchService:
                 },
                 async_mode=False
             )
-            return batch
+            return batch_with_relations
 
         except Exception:
             await self.session.rollback()
@@ -86,7 +88,7 @@ class BatchService:
         """Обновляет партию"""
         batch = await self.batch_repo.get_by_id_with_relations(batch_id)
         if not batch:
-            raise ValueError(f"Batch with ID {batch_id} not found")
+            return None
 
         update_data = data.model_dump(exclude_unset=True)
         if "is_closed" in update_data and batch.is_closed != update_data["is_closed"]:
@@ -96,17 +98,17 @@ class BatchService:
                 update_data["closed_at"] = None
 
         if (
-            update_data["batch_number"] is not None
-            or update_data["batch_date"] is not None
+            update_data.get('batch_number') is not None
+            or update_data.get('batch_date') is not None
         ):
             new_number = (
                 update_data["batch_number"]
-                if update_data["batch_number"] is not None
+                if update_data.get('batch_number') is not None
                 else batch.batch_number
             )
             new_date = (
                 update_data["batch_date"]
-                if update_data["batch_date"] is not None
+                if update_data.get('batch_date') is not None
                 else batch.batch_date
             )
             is_unique = await self.batch_repo.is_batch_number_unique(
@@ -121,6 +123,7 @@ class BatchService:
             batch = await self.batch_repo.update(batch_id, update_data)
             await self.session.commit()
             await self.session.refresh(batch)
+            batch_with_relations = await self.batch_repo.get_by_id_with_relations(batch_id)
             await self.webhook_service.send_event(
                 "batch_updated",
                 {
@@ -130,7 +133,7 @@ class BatchService:
                 },
                 async_mode=False
             )
-            return batch
+            return batch_with_relations
         except Exception:
             await self.session.rollback()
             raise
@@ -153,6 +156,7 @@ class BatchService:
             stats = await self.batch_repo.get_batch_aggregation_stats(batch_id)
             await self.session.commit()
             await self.session.refresh(batch)
+            batch_with_relations = await self.batch_repo.get_by_id_with_relations(batch_id)
             await self.webhook_service.send_event(
                 "batch_closed",
                 {
@@ -163,7 +167,9 @@ class BatchService:
                     else None,
                     "statistics": stats,
                 },
+                async_mode=False
             )
+            return batch_with_relations
         except Exception:
             await self.session.rollback()
             raise
@@ -175,7 +181,7 @@ class BatchService:
         """Агрегирует продукт"""
         batch = await self.get_by_id(batch_id)
         if not batch:
-            raise ValueError(f"Batch with ID {batch_id} not found")
+            return None
         if batch.is_closed:
             raise ValueError(f"Batch with ID {batch_id} is closed")
 
@@ -204,10 +210,12 @@ class BatchService:
                     if product_update.aggregated_at
                     else None,
                 },
+                async_mode=False
             )
             stats = await self.batch_repo.get_batch_aggregation_stats(batch_id)
             if stats["remaining"] == 0:
                 batch = await self.close_batch(batch_id)
+            return product_update
         except Exception:
             await self.session.rollback()
             raise
