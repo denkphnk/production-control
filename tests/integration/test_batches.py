@@ -316,7 +316,7 @@ class TestBatches:
         response = await client.get("/api/v1/batches/?shift=1 смена")
         assert response.status_code == 200
         assert len(response.json()["items"]) == 1
-        assert response.json()["items"][0]["id"] == 2
+        assert response.json()["items"][0]["shift"] == "1 смена"
 
     ##########################################
     # 5. POST /batches/{batch_id}/close
@@ -371,7 +371,7 @@ class TestBatches:
     ):
         """Тест агрегации несуществующей партии"""
         response = await client.post(
-            "/api/v1/batches/2/aggregate",
+            "/api/v1/batches/999999/aggregate",
             json={"unique_code": create_product.unique_code},
         )
 
@@ -379,20 +379,28 @@ class TestBatches:
 
     @pytest.mark.asyncio
     async def test_aggregate_products_already_aggreg(
-        self, client: AsyncClient, create_batch, create_product
+        self, client: AsyncClient, create_batch, create_product, create_workcenter
     ):
         """Тест агрегации уже агрегированной продукции"""
         product = await client.post(
+            "/api/v1/products/",
+            json={
+                "unique_code": 22222,
+                "batch_id": create_batch.id
+            },
+        )
+
+        aggregate_product = await client.post(
             f"/api/v1/batches/{create_batch.id}/aggregate",
             json={"unique_code": create_product.unique_code},
         )
 
         response = await client.post(
-            "/api/v1/batches/1/aggregate",
+            f"/api/v1/batches/{create_batch.id}/aggregate",
             json={"unique_code": create_product.unique_code},
         )
-
         assert response.status_code == 400
+        assert "already aggregated" in response.json()["detail"]
 
     @pytest.mark.asyncio
     async def test_aggregate_products_closed_batch(

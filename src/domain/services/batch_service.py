@@ -192,6 +192,8 @@ class BatchService:
             raise ValueError(
                 f"Product with unique code {unique_code} not found in batch with ID {batch_id}"
             )
+        if product.is_aggregated:
+            raise ValueError(f'Product with unique_code {unique_code} already aggregated')
 
         try:
             product_update = await self.product_repo.update(

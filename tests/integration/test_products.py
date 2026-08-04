@@ -40,7 +40,7 @@ class TestProducts:
     async def test_create_product_success(self, client: AsyncClient, create_batch):
         """Тест создания партии"""
         response = await client.post(
-            "/api/v1/products/", json={"unique_code": 11111, "batch_id": 1}
+            "/api/v1/products/", json={"unique_code": 11111, "batch_id": create_batch.id}
         )
 
         assert response.status_code == 201
@@ -51,7 +51,7 @@ class TestProducts:
     ):
         """Тест создания продукции с дубликатом кода"""
         response = await client.post(
-            "/api/v1/products/", json={"unique_code": 12345, "batch_id": 1}
+            "/api/v1/products/", json={"unique_code": 12345, "batch_id": create_batch.id}
         )
 
         assert response.status_code == 400
@@ -61,7 +61,7 @@ class TestProducts:
     async def test_create_product_invalid_batch(self, client: AsyncClient):
         """Тест создания продукции с невалидным ID партии"""
         response = await client.post(
-            "/api/v1/products/", json={"unique_code": 12345, "batch_id": 1}
+            "/api/v1/products/", json={"unique_code": 12345, "batch_id": 99999}
         )
 
         assert response.status_code == 400
@@ -72,7 +72,7 @@ class TestProducts:
         """Тест создания продукции в закрытой партии"""
         batch = await client.post(f"/api/v1/batches/{create_batch.id}/close")
         response = await client.post(
-            "/api/v1/products/", json={"unique_code": 12345, "batch_id": 1}
+            "/api/v1/products/", json={"unique_code": 12345, "batch_id": create_batch.id}
         )
 
         assert response.status_code == 400
