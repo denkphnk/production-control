@@ -138,6 +138,9 @@ services:
     environment:
       - CELERY_BROKER_URL=amqp://admin:admin@rabbitmq:5672//
       - CELERY_RESULT_BACKEND=redis://redis:6379/1
+    working_dir: /app
+    volumes:
+    - ./src:/app/src
     command: celery -A src.celery_app flower --port=5555
 
   # MinIO (S3-compatible Object Storage)
