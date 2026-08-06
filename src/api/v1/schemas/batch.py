@@ -13,9 +13,11 @@ class ProductInBatchResponse(BaseModel):
     """Продукция в партии"""
 
     id: int = Field(..., ge=1, description="ID продукции")
-    unique_code: int = Field(..., ge=1, description="Уникальный код продукции")
+    unique_code: str = Field(..., min_length=1, description="Уникальный код продукции")
     is_aggregated: bool = Field(..., description="Статус агрегации")
     aggregated_at: Optional[datetime] = Field(None, description="Дата агрегации")
+
+    model_config=ConfigDict(from_attributes=True)
 
 
 ##########################################
@@ -282,4 +284,4 @@ class AggregateProduct(BaseModel):
     Используется в POST /api/v1/batches/{batch_id}/aggregate
     """
 
-    unique_code: int = Field(..., ge=1, description="Уникальный код продукции")
+    unique_code: str = Field(..., min_length=1, description="Уникальный код продукции")

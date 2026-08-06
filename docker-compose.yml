@@ -95,6 +95,7 @@ services:
       - rabbitmq
       - minio
     environment:
+      - CELERY_CUSTOM_WORKER_POOL=celery_aio_pool.pool:AsyncIOPool
       - DATABASE_URL=postgresql+asyncpg://postgres:postgres@postgres:5432/production_control
       - REDIS_URL=redis://redis:6379/0
       - CELERY_BROKER_URL=amqp://admin:admin@rabbitmq:5672//
@@ -104,7 +105,7 @@ services:
       - MINIO_SECRET_KEY=minioadmin
     volumes:
       - ./src:/app/src
-    command: celery -A src.celery_app worker --loglevel=info --concurrency=4
+    command: celery -A src.celery_app worker --pool=custom --loglevel=info --concurrency=10
 
   # Celery Beat (Scheduler)
   celery_beat:

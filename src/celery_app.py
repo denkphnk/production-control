@@ -23,6 +23,7 @@ celery_app.conf.update(
     task_time_limit=30 * 60,
     task_soft_time_limit=25 * 60,
     result_expires=3600,
+    worker_pool="asyncio",
 )
 
 if __name__ == '__main__':
