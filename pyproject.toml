@@ -33,6 +33,7 @@ pytest-asyncio = "^1.4.0"
 greenlet = "^3.5.4"
 psycopg2 = "^2.9.12"
 celery-pool-asyncio = "^0.2.0"
+celery-aio-pool = "^0.1.0rc8"
 
 [tool.poetry.group.dev.dependencies]
 pytest = "^9.0.0"

@@ -385,7 +385,7 @@ class TestBatches:
         product = await client.post(
             "/api/v1/products/",
             json={
-                "unique_code": 22222,
+                "unique_code": '22222',
                 "batch_id": create_batch.id
             },
         )
