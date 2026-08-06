@@ -13,12 +13,12 @@ class ProductCreate(BaseModel):
     batch_id: int = Field(
         ..., ge=1, description="ID партии, к которой добавляется продукция"
     )
-    unique_code: int = Field(..., ge=1, description="Уникальный код продукции")
+    unique_code: str = Field(..., min_length=1, description="Уникальный код продукции")
 
 class ProductListItemResponse(BaseModel):
     """Схема элемента списка продукции"""
     id: int = Field(..., ge=1, description="ID продукции")
-    unique_code: int = Field(..., ge=1, description="Уникальный код продукции")
+    unique_code: str = Field(..., min_length=1, description="Уникальный код продукции")
     is_aggregated: bool = Field(..., description="Статус агрегации")
     batch_id: int = Field(..., ge=1, description='ID партии')
 

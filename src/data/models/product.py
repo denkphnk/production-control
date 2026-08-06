@@ -9,7 +9,7 @@ class Product(Base):
     __tablename__ = 'products'
     id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
 
-    unique_code: Mapped[int] = mapped_column(unique=True, nullable=False, index=True)
+    unique_code: Mapped[str] = mapped_column(unique=True, nullable=False, index=True)
     batch_id: Mapped[int] = mapped_column(ForeignKey('batches.id'), nullable=False, index=True)
 
     # Агрегация

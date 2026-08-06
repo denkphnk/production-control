@@ -4,6 +4,7 @@ version = "0.1.0"
 description = "Production Control System"
 authors = ["Daniel <daniilkacuk@gmail.com>"]
 readme = "README.md"
+package-mode = false 
 
 [tool.poetry.dependencies]
 python = "^3.11"
@@ -29,6 +30,10 @@ cryptography = "^43.0.0"
 pytest = "^9.1.1"
 pytest-dotenv = "^0.5.2"
 pytest-asyncio = "^1.4.0"
+greenlet = "^3.5.4"
+psycopg2 = "^2.9.12"
+celery-pool-asyncio = "^0.2.0"
+celery-aio-pool = "^0.1.0rc8"
 
 [tool.poetry.group.dev.dependencies]
 pytest = "^9.0.0"

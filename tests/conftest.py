@@ -83,7 +83,7 @@ async def create_product(db_session, create_batch):
     from src.data.models.product import Product
 
     product = Product(
-        unique_code=12345,
+        unique_code='12345',
         batch_id=create_batch.id
     )
 
