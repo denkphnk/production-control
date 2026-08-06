@@ -84,10 +84,92 @@ async def aggregate_products_batch(self, batch_id: int, codes: List[str]):
 
 # TODO: generate_batch_report
 @celery_app.task(bind=True, max_retries=3)
-def generate_batch_report(self):
-    """Генерация отчета"""
+def generate_batch_report(
+    self,
+    batch_id: int,
+    format: str = "excel",
+    user_email: str | None = None
+):
+    """
+    Генерация детального отчета по партии.
+    
+    Создает Excel/PDF файл со следующей информацией:
+    - Основные данные партии
+    - Список всей продукции (аггрегированной и нет)
+    - Статистика аггрегации
+    - График аггрегации по времени (для PDF)
+    - Информация о бригаде и смене
+    
+    Args:
+        batch_id: ID партии
+        format: "excel" или "pdf"
+        user_email: Email для отправки уведомления (опционально)
+    
+    Returns:
+        {
+            "success": True,
+            "file_url": "https://minio.local/reports/batch_123_report.xlsx",
+            "file_name": "batch_123_report.xlsx",
+            "file_size": 152400,  # bytes
+            "expires_at": "2024-02-07T00:00:00Z"
+        }
+    """
     pass
 
+# TODO: import_batches_from_file
+@celery_app.task(bind=True, max_retries=1)
+def import_batches_from_file(
+    self,
+    file_url: str,
+    user_id: int
+):
+    """
+    Импорт партий из Excel/CSV файла.
+    
+    Формат файла (Excel):
+    | НомерПартии | ДатаПартии | Номенклатура | РабочийЦентр | ... |
+    |-------------|------------|--------------|--------------|-----|
+    | 22222       | 2024-01-30 | Болт М10     | Цех №1       | ... |
+    
+    Args:
+        file_url: URL файла в MinIO
+        user_id: ID пользователя для отправки результата
+    
+    Returns:
+        {
+            "success": True,
+            "total_rows": 100,
+            "created": 95,
+            "skipped": 5,
+            "errors": [
+                {"row": 15, "error": "Duplicate batch number and date"},
+                ...
+            ]
+        }
+    """
+    pass
+
+# TODO: export_batches_to_file
+@celery_app.task
+def export_batches_to_file(
+    filters: dict,
+    format: str = "excel"
+):
+    """
+    Экспорт списка партий в файл.
+    
+    Args:
+        filters: Фильтры для выборки партий
+        format: "excel" или "csv"
+    
+    Returns:
+        {
+            "success": True,
+            "file_url": "...",
+            "total_batches": 150
+        }
+    """
+    pass
 @celery_app.task(bind=True, max_retries=3)
 def test_celery_task(self, message: str):
     """

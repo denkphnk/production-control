@@ -16,7 +16,7 @@ async def run_test_task(message: str = "Hello, Celery!"):
         "status": "PENDING",
         "message": f"Task started: {message}"
     }
-# TODO: start_aggregation
+
 @async_batches_router.post('/{batch_id}/aggregate-async')
 async def mass_aggregation(batch_id: int, data: AggregateRequest):
     """Массовая агрегация"""
