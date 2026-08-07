@@ -228,3 +228,16 @@ class BatchService:
     async def get_statistics(self, batch_id: int) -> Dict[str, Any]:
         """Возвращает статистику агрегации для партии"""
         return await self.batch_repo.get_batch_aggregation_stats(batch_id)
+
+    
+    ##########################################
+    # ЗАКРЫТИЕ ПАРТИЙ У КОТОРЫХ SHIFT_END < NOW
+    ##########################################
+    async def close_expired_batches(self):
+        """Закрывает просроченные партии"""
+        batches = await self.batch_repo.get_expired_batches()
+
+        closed = await self.batch_repo.update_many(ids=batches, data={"is_closed": True})
+        await self.session.commit()
+
+        return len(closed)

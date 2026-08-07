@@ -1,8 +1,13 @@
-from typing import List
+import json
 
+from typing import List
+from datetime import datetime, timezone
+
+from src.domain.services.analytics_service import AnalyticsService
 from src.domain.services.product_service import ProductService
 from src.domain.services.batch_service import BatchService
 from src.core.database import AsyncSessionLocal
+from src.core.cache import redis
 from src.celery_app import celery_app
 
 @celery_app.task(bind=True)
@@ -170,6 +175,30 @@ def export_batches_to_file(
         }
     """
     pass
+
+
+@celery_app.task
+async def auto_close_expired_batches():
+    async with AsyncSessionLocal() as session:
+        batch_service = BatchService(session)
+        closed = await batch_service.close_expired_batches()
+
+        return {"closed_batches": closed}
+
+
+# TODO: update_cached_stats
+@celery_app.task
+async def update_cached_statistics():
+    async with AsyncSessionLocal() as session:
+        analytic_service = AnalyticsService(session)
+        stats = await analytic_service.get_dashboard_statistics()
+
+        stats["cached_at"] = datetime.now(timezone.utc).isoformat()
+
+        await redis.set("dashboard_stats", json.dumps(stats), ex=300)
+
+        return stats
+
 @celery_app.task(bind=True, max_retries=3)
 def test_celery_task(self, message: str):
     """

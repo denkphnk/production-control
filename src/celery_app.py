@@ -1,4 +1,5 @@
 from celery import Celery
+from celery.schedules import crontab
 from src.core.config import settings
 
 
@@ -25,6 +26,25 @@ celery_app.conf.update(
     result_expires=3600,
     worker_pool="asyncio",
 )
+
+celery_app.conf.beat_schedule = {
+    "auto-close-expired-batches": {
+        "task": "src.tasks.batch_tasks.auto_close_expired_batches",
+        "schedule": 30,
+    },
+    "cleanup-old-files": {
+        "task": "src.tasks.report_tasks.cleanup_old_files",
+        "schedule": crontab(hour=2, minute=0),
+    },
+    "update-statistics": {
+        "task": "src.tasks.batch_tasks.update_cached_statistics",
+        "schedule": crontab(minute="*/5"),
+    },
+    "retry-failed-webhooks": {
+        "task": "src.tasks.webhook_tasks.retry_failed_webhooks",
+        "schedule": crontab(minute="*/15"),
+    },
+}
 
 if __name__ == '__main__':
     celery_app.start() 

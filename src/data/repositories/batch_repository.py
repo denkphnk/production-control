@@ -73,11 +73,11 @@ class BatchRepository(BaseRepository[Batch]):
     ##########################################
     # НАХОДИТ ПАРТИИ КОТОРЫЕ ПОРА ЗАКРЫТЬ
     ##########################################
-    async def get_expired_batches(self) -> List[Batch]:
+    async def get_expired_batches(self) -> List[int]:
         """Находит все партии, которые пора закрыть — смена уже закончилась, а партия еще не закрыта"""
         now = datetime.now(timezone.utc)
-        query = select(self.model).where(
-            self.model.shift_end < now, not self.model.is_closed
+        query = select(self.model.id).where(
+            self.model.shift_end < now, self.model.is_closed == False
         )
 
         res = await self.session.execute(query)
