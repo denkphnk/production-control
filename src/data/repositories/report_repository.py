@@ -1,4 +1,4 @@
-from typing import Optional
+from typing import List, Optional
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -11,7 +11,7 @@ class ReportRepository(BaseRepository[Report]):
     def __init__(self, session: AsyncSession):
         super().__init__(Report, session)
 
-    async def get_by_batch_id(self, batch_id: int) -> list[Report]:
+    async def get_by_batch_id(self, batch_id: int) -> List[Report]:
         query = select(self.model).where(self.model.batch_id == batch_id)
         res = await self.session.execute(query)
 
