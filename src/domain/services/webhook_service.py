@@ -52,6 +52,9 @@ class WebhookService:
         """Возвращает список всех подписок."""
         return await self.webhook_repo.get_all_with_count(offset, limit)
 
+    async def get_failed(self):
+        return await self.webhook_repo.get_failed_deliveries()
+
     ##########################################
     # ОБНОВЛЕНИЕ ПОДПИСКИ
     ##########################################

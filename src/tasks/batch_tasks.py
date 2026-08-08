@@ -127,7 +127,6 @@ def import_batches_from_file(
     """
     pass
 
-# TODO: export_batches_to_file
 @celery_app.task
 async def export_batches_to_file(
     filters: dict,
