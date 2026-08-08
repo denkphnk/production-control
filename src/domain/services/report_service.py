@@ -1,11 +1,10 @@
-from typing import List
+from typing import List, Optional
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.data.models.report import Report
 from src.data.repositories.batch_repository import BatchRepository
 from src.data.repositories.report_repository import ReportRepository
-from src.storage.minio_service import minio_service
 
 class ReportService:
     def __init__(self, session: AsyncSession):
@@ -14,8 +13,9 @@ class ReportService:
         self.batch_repo = BatchRepository(session)
 
     async def create_report(self, batch_id: int) -> Report:
+        from src.tasks.report_tasks import generate_batch_report
         batch = await self.batch_repo.get_by_id(batch_id)
-
+        
         if not batch:
             raise ValueError(f'Batch with ID {batch_id} not found')
         
@@ -29,8 +29,7 @@ class ReportService:
         )
 
         await self.session.commit()
-        # TODO: generate_report
-        # generate_report.delay(report.id)
+        generate_batch_report.delay(batch.id)
 
         return report
 
@@ -49,17 +48,10 @@ class ReportService:
         reports = await self.report_repo.get_by_batch_id(batch_id)
         return reports
 
-    async def get_download_url(self, report_id: int) -> str:
-        report = await self.report_repo.get_by_id(report_id)
-        if not report:
-            raise ValueError(f'Report with ID {report_id} not found')
+    async def get_last_report(self, batch_id: int) -> Report:
+        batch = await self.batch_repo.get_by_id(batch_id)
+        if not batch:
+            raise ValueError(f'Batch with ID {batch_id} not found')
 
-        if report.status != "completed":
-            raise ValueError("Report is not ready")
-
-        url = minio_service.get_presigned_url(
-            bucket_name='reports',
-            object_name=report.file_path
-        )
-
-        return url
+        report = await self.report_repo.get_last_report(batch_id)
+        return report

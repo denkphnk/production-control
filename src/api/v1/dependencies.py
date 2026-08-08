@@ -2,6 +2,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from fastapi import Depends
 
+from src.domain.services.report_service import ReportService
 from src.domain.services.batch_service import BatchService
 from src.domain.services.product_service import ProductService
 from src.domain.services.workcenter_service import WorkCenterService
@@ -36,3 +37,9 @@ async def get_webhook_service(
     session: AsyncSession = Depends(get_db),
 ) -> WebhookService:
     return WebhookService(session)
+
+
+async def get_report_service(
+    session: AsyncSession = Depends(get_db),
+) -> ReportService:
+    return ReportService(session)

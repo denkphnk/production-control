@@ -1,6 +1,10 @@
+from typing import List
+
 from fastapi import APIRouter, Depends, HTTPException, status
 
-from src.api.v1.dependencies import get_batch_service
+from src.api.v1.schemas.report import ReportResponse
+from src.domain.services.report_service import ReportService
+from src.api.v1.dependencies import get_batch_service, get_report_service
 from src.api.v1.schemas.batch import (
     BatchCreate,
     BatchDetailResponse,
@@ -161,3 +165,33 @@ async def update_batch(
         return response_batch
     except ValueError as e:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+
+
+@batches_router.post(
+    '/{batch_id}/report',
+    response_model=ReportResponse,
+    status_code=201
+)
+async def create_batch_report(batch_id: int, service: ReportService = Depends(get_report_service)):
+    try:
+        return await service.create_report(batch_id)
+
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(e)
+        )
+
+@batches_router.get(
+    '/batches/{batch_id}',
+    response_model=List[ReportResponse],
+)
+async def get_reports_by_batch(batch_id: int, service: ReportService = Depends(get_report_service)):
+    try:
+        return await service.get_reports_by_batch(batch_id)
+    
+    except Exception as e:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=str(e)
+            )
