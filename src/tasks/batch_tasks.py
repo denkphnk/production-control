@@ -1,14 +1,20 @@
 import json
+import os
 
 from typing import List
 from datetime import datetime, timezone
+from openpyxl import Workbook
+from openpyxl.styles import Font
+from openpyxl.utils import get_column_letter
 
+from src.api.v1.schemas.batch import BatchListRequest
 from src.domain.services.analytics_service import AnalyticsService
 from src.domain.services.product_service import ProductService
 from src.domain.services.batch_service import BatchService
 from src.core.database import AsyncSessionLocal
 from src.core.cache import redis
 from src.celery_app import celery_app
+from src.storage.minio_service import minio_service
 
 @celery_app.task(bind=True)
 async def aggregate_products_batch(self, batch_id: int, codes: List[str]):
@@ -123,7 +129,7 @@ def import_batches_from_file(
 
 # TODO: export_batches_to_file
 @celery_app.task
-def export_batches_to_file(
+async def export_batches_to_file(
     filters: dict,
     format: str = "excel"
 ):
@@ -141,7 +147,115 @@ def export_batches_to_file(
             "total_batches": 150
         }
     """
-    pass
+    print("EXPORT STARTED")
+    async with AsyncSessionLocal() as session:
+        batch_service = BatchService(session)
+        file_name = None
+        try:
+            filters['offset'] = 0
+            filters['limit'] = 100
+
+            batches, total = await batch_service.get_list(BatchListRequest(**filters))
+            headers = [
+                "ID",
+                "Номер партии",
+                "Дата партии",
+                "Статус",
+                "Смена",
+                "Бригада",
+                "Номенклатура",
+                "ЕКН",
+            ]
+
+            if format == 'excel':
+                file_name = (
+                    f"batches_export_"
+                    f"{datetime.now().strftime('%Y%m%d_%H%M%S')}"
+                    ".xlsx"
+                )
+                wb = Workbook()
+                sheet = wb.active
+
+
+                
+                sheet.append(headers)
+                for cell in sheet[1]:
+                    cell.font = Font(bold=True)
+
+                for batch in batches:
+                    sheet.append([
+                        batch.id,
+                        batch.batch_number,
+                        batch.batch_date,
+                        "Закрыта" if batch.is_closed else "Активна",
+                        batch.shift,
+                        batch.team,
+                        batch.nomenclature,
+                        batch.ekn_code,
+                    ])
+
+                for worksheet in wb.worksheets:
+                    for column in worksheet.columns:
+                        max_length = 0
+                        column_letter = get_column_letter(column[0].column)
+
+                        for cell in column:
+                            try:
+                                if cell.value is not None:
+                                    max_length = max(
+                                        max_length,
+                                        len(str(cell.value))
+                                    )
+                            except Exception:
+                                pass
+
+                        adjusted_width = max_length + 2
+                        worksheet.column_dimensions[column_letter].width = adjusted_width
+
+                wb.save(file_name)
+
+            elif format == 'csv':
+                import csv
+
+                file_name = (
+                    f"batches_export_"
+                    f"{datetime.now().strftime('%Y%m%d_%H%M%S')}"
+                    ".csv"
+                )
+
+                with open(file_name, "w", newline='', encoding='utf-8-sig') as f:
+                    writer = csv.writer(f)
+
+                    writer.writerow(headers)
+
+                    for batch in batches:
+                        writer.writerow([
+                            batch.id,
+                            batch.batch_number,
+                            batch.batch_date,
+                            "Закрыта" if batch.is_closed else "Активна",
+                            batch.shift,
+                            batch.team,
+                            batch.nomenclature,
+                            batch.ekn_code,
+                    ])
+            else:
+                raise ValueError('Supports only Excel or CSV')
+            
+            file_url = minio_service.upload_file(
+                bucket='exports',
+                object_name=file_name,
+                file_path=file_name
+            )
+
+            return {
+                "success": True,
+                "file_url": file_url,
+                "total_batches": total
+            }
+        finally:
+            if file_name and os.path.exists(file_name):
+                os.remove(file_name)
 
 
 @celery_app.task

@@ -41,8 +41,8 @@ async def generate_batch_report(
 
                 file_name = f"batch_{batch_id}.xlsx"
 
-                wk = Workbook()
-                sheet = wk.active
+                wb = Workbook()
+                sheet = wb.active
                 sheet.title = 'Информация о партии'
 
                 sheet["A1"] = "Номер партии"
@@ -72,7 +72,7 @@ async def generate_batch_report(
                 sheet['A9'] = 'Окончание смены'
                 sheet['B9'] = batch.shift_end.replace(tzinfo=None)
 
-                products_sheet = wk.create_sheet('Продукция')
+                products_sheet = wb.create_sheet('Продукция')
 
                 products_sheet['A1'] = 'ID'
                 products_sheet['B1'] = 'Уникальный код'
@@ -85,7 +85,7 @@ async def generate_batch_report(
                     products_sheet[f'C{i+2}'] = 'Да' if product.is_aggregated else 'Нет'
                     products_sheet[f'D{i+2}'] = product.aggregated_at.replace(tzinfo=None) if product.is_aggregated else '-'
 
-                stats_sheet = wk.create_sheet('Статистика')
+                stats_sheet = wb.create_sheet('Статистика')
                 stats = await batch_service.get_statistics(batch_id)
 
                 stats_sheet['A1'] = 'Всего продукции'
@@ -117,7 +117,7 @@ async def generate_batch_report(
 
                 stats_sheet['B5'] = f'{average_speed} ед/час'
 
-                for worksheet in wk.worksheets:
+                for worksheet in wb.worksheets:
                     for column in worksheet.columns:
                         max_length = 0
                         column_letter = get_column_letter(column[0].column)
@@ -139,7 +139,7 @@ async def generate_batch_report(
                 for cell in products_sheet[1]:
                     cell.font = Font(bold=True)
 
-                wk.save(file_name)
+                wb.save(file_name)
             else:
                 pass
                             

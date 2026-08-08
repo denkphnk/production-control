@@ -1,8 +1,8 @@
-from typing import List
+from typing import Any, Dict, List
 
 from fastapi import APIRouter, Depends, HTTPException, status
 
-from src.api.v1.schemas.report import ReportResponse
+from src.api.v1.schemas.report import BatchExportRequest, ReportResponse
 from src.domain.services.report_service import ReportService
 from src.api.v1.dependencies import get_batch_service, get_report_service
 from src.api.v1.schemas.batch import (
@@ -19,6 +19,7 @@ from src.api.v1.schemas.batch import (
 )
 
 from src.domain.services.batch_service import BatchService
+from src.celery_app import celery_app
 
 batches_router = APIRouter(prefix="/api/v1/batches", tags=["batches"])
 
@@ -183,7 +184,7 @@ async def create_batch_report(batch_id: int, service: ReportService = Depends(ge
         )
 
 @batches_router.get(
-    '/batches/{batch_id}',
+    '/{batch_id}/report',
     response_model=List[ReportResponse],
 )
 async def get_reports_by_batch(batch_id: int, service: ReportService = Depends(get_report_service)):
@@ -195,3 +196,11 @@ async def get_reports_by_batch(batch_id: int, service: ReportService = Depends(g
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail=str(e)
             )
+
+@batches_router.post('/export')
+async def export_batches(data: BatchExportRequest, service: BatchService = Depends(get_batch_service)):
+    return await service.export_batches(
+        filters=data.filters.model_dump(exclude_none=True),
+        format=data.format
+        )
+

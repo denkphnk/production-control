@@ -11,7 +11,6 @@ from src.data.repositories.workcenter_repository import WorkCenterRepository
 from src.domain.schemas.batch import BatchListRequest, BatchCreate, BatchUpdate
 from src.domain.services.webhook_service import WebhookService
 
-
 class BatchService:
     """Сервис для работы с партями"""
 
@@ -245,3 +244,16 @@ class BatchService:
         await self.session.commit()
 
         return len(closed)
+
+    async def export_batches(
+        self,
+        filters: Dict[str, Any],
+        format: str
+    ):
+        from src.tasks.batch_tasks import export_batches_to_file
+
+        task = export_batches_to_file.delay(filters, format)
+
+        return {
+            "task_id": task.id
+        }
