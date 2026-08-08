@@ -229,6 +229,10 @@ class BatchService:
         """Возвращает статистику агрегации для партии"""
         return await self.batch_repo.get_batch_aggregation_stats(batch_id)
 
+    async def get_full_statistics(self, batch_id: int) -> Dict[str, Any]:
+        """Возвращает полную статистику партии"""
+        return await self.batch_repo.get_batch_full_stats(batch_id)
+
     
     ##########################################
     # ЗАКРЫТИЕ ПАРТИЙ У КОТОРЫХ SHIFT_END < NOW

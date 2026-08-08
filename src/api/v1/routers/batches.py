@@ -78,7 +78,7 @@ async def get_statistics(
 ):
     """Возвращает статистику агрегации"""
 
-    stats = await service.get_statistics(batch_id)
+    stats = await service.get_full_statistics(batch_id)
     response_stats = BatchStatisticsResponse(**stats)
     return response_stats
 

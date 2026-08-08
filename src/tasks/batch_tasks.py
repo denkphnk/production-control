@@ -87,39 +87,6 @@ async def aggregate_products_batch(self, batch_id: int, codes: List[str]):
             "errors": errors[:10]
         }
 
-# TODO: generate_batch_report
-@celery_app.task(bind=True, max_retries=3)
-def generate_batch_report(
-    self,
-    batch_id: int,
-    format: str = "excel",
-    user_email: str | None = None
-):
-    """
-    Генерация детального отчета по партии.
-    
-    Создает Excel/PDF файл со следующей информацией:
-    - Основные данные партии
-    - Список всей продукции (аггрегированной и нет)
-    - Статистика аггрегации
-    - График аггрегации по времени (для PDF)
-    - Информация о бригаде и смене
-    
-    Args:
-        batch_id: ID партии
-        format: "excel" или "pdf"
-        user_email: Email для отправки уведомления (опционально)
-    
-    Returns:
-        {
-            "success": True,
-            "file_url": "https://minio.local/reports/batch_123_report.xlsx",
-            "file_name": "batch_123_report.xlsx",
-            "file_size": 152400,  # bytes
-            "expires_at": "2024-02-07T00:00:00Z"
-        }
-    """
-    pass
 
 # TODO: import_batches_from_file
 @celery_app.task(bind=True, max_retries=1)

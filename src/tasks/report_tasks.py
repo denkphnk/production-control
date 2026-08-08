@@ -32,11 +32,11 @@ async def generate_batch_report(
         
         products = await product_service.get_by_batch_id(batch_id)
         try:
+            # TODO: PDF GENERATE
             if format == 'excel':
                 from openpyxl import Workbook
                 from openpyxl.utils import get_column_letter
                 from openpyxl.styles import Font
-
 
 
                 file_name = f"batch_{batch_id}.xlsx"
@@ -98,7 +98,7 @@ async def generate_batch_report(
                 stats_sheet['B3'] = stats['remaining']
 
                 stats_sheet['A4'] = 'Процент выполнения'
-                stats_sheet['B4'] = f"{round(stats['aggregation_rate'], 2)}%"
+                stats_sheet['B4'] = f"{round(stats['aggregation_rate'] * 100, 2)}%"
 
                 stats_sheet['A5'] = 'Средняя скорость'
 

@@ -184,20 +184,111 @@ class BatchFullResponse(BatchDetailResponse):
     
     model_config = ConfigDict(from_attributes=True)
 
-class BatchStatisticsResponse(BaseModel):
-    """Схема для статистики агрегации по партии"""
+##########################################
+# СТАТИСТИКА
+##########################################
+class BatchInfoResponse(BaseModel):
+    id: int = Field(
+        ...,
+        description="Уникальный идентификатор партии"
+    )
 
+    batch_number: int = Field(
+        ...,
+        description="Номер партии"
+    )
+
+    batch_date: date = Field(
+        ...,
+        description="Дата партии"
+    )
+
+    is_closed: bool = Field(
+        ...,
+        description="Признак закрытия партии"
+    )
+
+
+class ProductionStatsResponse(BaseModel):
     total_products: int = Field(
-        ..., ge=0, description="Общее количество продукции в партии"
+        ...,
+        description="Общее количество продукции в партии"
     )
+
     aggregated: int = Field(
-        ..., ge=0, description="Количество агрегированной продукции"
+        ...,
+        description="Количество агрегированной продукции"
     )
+
     remaining: int = Field(
-        ..., ge=0, description="Количество неагрегированной продукции"
+        ...,
+        description="Количество продукции, оставшейся для агрегации"
     )
+
     aggregation_rate: float = Field(
-        ..., ge=0.0, le=100.0, description="Процент агрегации (0-100)"
+        ...,
+        description="Процент выполнения агрегации"
+    )
+
+
+class TimelineResponse(BaseModel):
+    shift_duration_hours: float = Field(
+        ...,
+        description="Полная продолжительность смены в часах"
+    )
+
+    elapsed_hours: float = Field(
+        ...,
+        description="Количество часов, прошедших с начала смены"
+    )
+
+    products_per_hour: float = Field(
+        ...,
+        description="Средняя скорость агрегации продукции в час"
+    )
+
+    estimated_completion: datetime | None = Field(
+        None,
+        description="Прогнозируемое время завершения агрегации"
+    )
+
+
+class TeamPerformanceResponse(BaseModel):
+    team: str = Field(
+        ...,
+        description="Название бригады"
+    )
+
+    avg_products_per_hour: float = Field(
+        ...,
+        description="Среднее количество агрегированной продукции в час"
+    )
+
+    efficiency_score: float = Field(
+        ...,
+        description="Оценка эффективности работы бригады"
+    )
+
+
+class BatchStatisticsResponse(BaseModel):
+    batch_info: BatchInfoResponse = Field(
+        ...,
+        description="Основная информация о партии"
+    )
+
+    production_stats: ProductionStatsResponse = Field(
+        ...,
+        description="Статистика продукции и агрегации"
+    )
+
+    timeline: TimelineResponse = Field(
+        ...,
+        description="Временные показатели выполнения партии"
+    )
+
+    team_performance: TeamPerformanceResponse = Field(
+        ...,
+        description="Показатели эффективности бригады"
     )
 
 

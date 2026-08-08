@@ -2,7 +2,7 @@ from typing import Optional, List, Dict, Any, Tuple
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import String, cast, func, or_, select
 
-from datetime import datetime, timezone, date
+from datetime import datetime, timedelta, timezone, date
 
 from sqlalchemy.orm import joinedload, selectinload
 
@@ -123,6 +123,73 @@ class BatchRepository(BaseRepository[Batch]):
             "aggregation_rate": rate,
         }
 
+    async def get_batch_full_stats(self, batch_id: int) -> Dict[str, Any]:
+        batch = await self.get_by_id(batch_id)
+        if not batch:
+            return {
+                "batch_info": {},
+                "production_stats": {},
+                "timeline": {},
+                "team_performance": {}
+            }
+
+        # BATCH_INFO
+        batch_info = {
+            "id": batch.id,
+            "batch_number": batch.batch_number,
+            "batch_date": batch.batch_date,
+            "is_closed": batch.is_closed,
+        }
+
+        # PRODUCTION_STATS
+        production_stats = await self.get_batch_aggregation_stats(batch_id)
+
+        # TIMELINE
+        shift_duration_hours = (batch.shift_end - batch.shift_start).total_seconds() / 3600
+
+        elapsed_end = batch.closed_at if batch.closed_at else min(batch.shift_end, datetime.now(timezone.utc))
+        elapsed_hours = (elapsed_end - batch.shift_start).total_seconds() / 3600
+
+        query_aggregated = (
+            select(func.count())
+            .select_from(Product)
+            .where(Product.batch_id == batch_id, Product.is_aggregated)
+        )
+
+        aggregated = production_stats['aggregated']
+        products_per_hour = aggregated / elapsed_hours if elapsed_hours else 0
+
+        if aggregated == production_stats['total_products']:
+            estimated_completion = None
+        else:
+            remaining_hours = production_stats['remaining'] / products_per_hour
+            estimated_completion = datetime.now(timezone.utc) + timedelta(hours=remaining_hours)
+
+        timeline = {
+            "shift_duration_hours": round(shift_duration_hours, 2),
+            "elapsed_hours": round(elapsed_hours, 2),
+            "products_per_hour": round(products_per_hour, 2),
+            "estimated_completion": estimated_completion,
+        }
+
+        # TEAM_PERFORMANCE
+        team = batch.team
+        avg_products_per_hour = products_per_hour
+        efficiency_score = production_stats["aggregation_rate"]
+
+        team_performance = {
+            "team": team,
+            "avg_products_per_hour": round(avg_products_per_hour, 2),
+            "efficiency_score": round(efficiency_score, 2)
+        }
+
+        return {
+            "batch_info": batch_info,
+            "production_stats": production_stats,
+            "timeline": timeline,
+            "team_performance": team_performance,
+        }
+        
     ##########################################
     # ПОИСК
     ##########################################
