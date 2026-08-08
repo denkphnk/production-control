@@ -65,7 +65,7 @@ class ProductRepository(BaseRepository[Product]):
         """Ищет неаггрегированную продукцию по ID партии"""
         query = (
             select(self.model)
-            .where(self.model.batch_id == batch_id, not self.model.is_aggregated)
+            .where(self.model.batch_id == batch_id, self.model.is_aggregated == False)
             .offset(offset)
             .limit(limit)
         )
@@ -88,7 +88,7 @@ class ProductRepository(BaseRepository[Product]):
             .where(
                 self.model.unique_code == unique_code,
                 self.model.batch_id == batch_id,
-                not self.model.is_aggregated,
+                self.model.is_aggregated == False,
             )
             .values(is_aggregated=True, aggregated_at=datetime.now(timezone.utc))
             .returning(self.model)

@@ -69,6 +69,18 @@ class BaseRepository(Generic[ModelType]):
 
         return result.scalar()
 
+    async def count_with_cond(self, *conditions) -> int:
+        """Считает количество записей с фильтрацией по условиям"""
+        query = (
+            select(func.count())
+            .select_from(self.model)
+            .where(*conditions)
+        )
+
+        result = await self.session.execute(query)
+
+        return result.scalar_one()
+
     async def exists(self, **filters) -> bool:
         """Проверяет существование записей по фильтрам"""
         query = select(self.model.id)

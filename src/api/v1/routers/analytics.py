@@ -1,6 +1,6 @@
 import json
 
-from fastapi import APIRouter
+from fastapi import APIRouter, HTTPException, status
 
 from src.core.cache import redis
 
@@ -11,8 +11,9 @@ async def get_analytics_dashboard():
     cached = await redis.get("dashboard_stats")
 
     if not cached:
-        return {
-            "message": "Statistics not available yet"
-        }
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail='Dashboard statistics not available'
+        )
 
     return json.loads(cached)
