@@ -186,7 +186,6 @@ async def auto_close_expired_batches():
         return {"closed_batches": closed}
 
 
-# TODO: update_cached_stats
 @celery_app.task
 async def update_cached_statistics():
     async with AsyncSessionLocal() as session:
