@@ -1,5 +1,7 @@
-from datetime import datetime, timedelta, timezone
 import os
+from datetime import datetime, timedelta, timezone
+
+
 
 from src.domain.services.webhook_service import WebhookService
 from src.domain.services.batch_service import BatchService
@@ -33,6 +35,7 @@ async def generate_batch_report(
             )
         
         products = await product_service.get_by_batch_id(batch_id)
+        file_name = None
         try:
             # TODO: PDF GENERATE
             if format == 'excel':
@@ -142,8 +145,89 @@ async def generate_batch_report(
                     cell.font = Font(bold=True)
 
                 wb.save(file_name)
-            else:
-                pass
+            elif format == 'pdf':
+                from reportlab.platypus import (
+                    SimpleDocTemplate,
+                    Paragraph,
+                    Spacer,
+                    PageBreak,
+                )
+                from reportlab.lib.styles import getSampleStyleSheet
+                from reportlab.pdfbase import pdfmetrics
+                from reportlab.pdfbase.ttfonts import TTFont
+                from reportlab.lib.styles import ParagraphStyle
+
+
+
+                file_name = f"batch_{batch.id}.pdf"
+                doc = SimpleDocTemplate(file_name)
+                pdfmetrics.registerFont(
+                    TTFont("DejaVuSans", "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf")
+                )
+
+                styles = getSampleStyleSheet()
+
+
+                title_style = ParagraphStyle(
+                    "TitleRu",
+                    parent=styles["Title"],
+                    fontName="DejaVuSans"
+                )
+
+                normal_style = ParagraphStyle(
+                    "NormalRu",
+                    parent=styles["Normal"],
+                    fontName="DejaVuSans"
+                )
+
+                heading1_style = ParagraphStyle(
+                    "HeadingRu",
+                    parent=styles["Heading1"],
+                    fontName="DejaVuSans"
+                )
+
+                heading2_style = ParagraphStyle(
+                    "HeadingRu",
+                    parent=styles["Heading2"],
+                    fontName="DejaVuSans"
+                )
+
+                elements = []
+                elements.append(Paragraph(f"Партия №{batch.batch_number}", title_style))
+                elements.append(Paragraph(f"Дата: {batch.batch_date}", title_style))
+                elements.append(Paragraph(f"Рабочий центр: {batch.work_center.identifier}",title_style))
+                elements.append(Paragraph(f"Смена: {batch.shift}", title_style))
+                elements.append(Paragraph(f"Бригада: {batch.team}", title_style))
+                elements.append(Spacer(1, 12))
+
+                stats = await batch_service.get_statistics(batch_id)
+
+                elements.append(Paragraph("Статистика", heading2_style))
+                elements.append(Paragraph(f"Всего продукции: {stats['total_products']}",title_style))
+                elements.append(Paragraph(f"Агрегировано: {stats['aggregated']}",title_style))
+                elements.append(Paragraph(f"Осталось: {stats['remaining']}",title_style))
+                elements.append(
+                    Paragraph(
+                        f"Процент выполнения: "
+                        f"{round(stats['aggregation_rate'] * 100, 2)}%",
+                        title_style
+                    )
+                )
+
+                elements.append(PageBreak())
+
+                elements.append(Paragraph("Продукция", heading1_style))
+
+                for product in products:
+                    elements.append(
+                        Paragraph(
+                            f"{product.unique_code} | "
+                            f"{'Да' if product.is_aggregated else 'Нет'}",
+                            title_style
+                        )
+                    )
+
+                doc.build(elements)
                             
             file_url = minio_service.upload_file(
                 bucket='reports',

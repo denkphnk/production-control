@@ -12,7 +12,7 @@ class ReportService:
         self.report_repo = ReportRepository(session)
         self.batch_repo = BatchRepository(session)
 
-    async def create_report(self, batch_id: int) -> Report:
+    async def create_report(self, batch_id: int, format: str) -> Report:
         from src.tasks.report_tasks import generate_batch_report
         batch = await self.batch_repo.get_by_id(batch_id)
         
@@ -29,7 +29,7 @@ class ReportService:
         )
 
         await self.session.commit()
-        generate_batch_report.delay(batch.id)
+        generate_batch_report.delay(batch.id, format)
 
 
         

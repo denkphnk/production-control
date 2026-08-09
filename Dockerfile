@@ -22,7 +22,7 @@ RUN poetry config virtualenvs.create false && \
      poetry install --no-interaction --no-ansi --no-root --no-dev) || \
     (echo "❌ Poetry install completely failed!" && exit 1)
 
-
+RUN apt-get update && apt-get install -y fonts-dejavu-core
 
 COPY ./src /app/src
 COPY ./migrations /app/migrations

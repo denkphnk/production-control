@@ -173,9 +173,9 @@ async def update_batch(
     response_model=ReportResponse,
     status_code=201
 )
-async def create_batch_report(batch_id: int, service: ReportService = Depends(get_report_service)):
+async def create_batch_report(batch_id: int, format: str = 'excel', service: ReportService = Depends(get_report_service)):
     try:
-        return await service.create_report(batch_id)
+        return await service.create_report(batch_id, format)
 
     except Exception as e:
         raise HTTPException(
