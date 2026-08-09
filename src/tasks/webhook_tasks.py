@@ -32,7 +32,6 @@ async def send_webhook_delivery(self, delivery_id: int):
             countdown=countdown
         )
 
-# TODO: cleanup_old_files()
 @celery_app.task(bind=True, max_retries=3)
 async def cleanup_old_files(self):
     try:
@@ -62,8 +61,6 @@ async def cleanup_old_files(self):
             countdown=60 * (2 ** self.request.retries)
         )
 
-
-# TODO: retry_failed_webhooks()
 @celery_app.task(bind=True, max_retries=3)
 async def retry_failed_webhooks(self):
     async with AsyncSessionLocal() as session:

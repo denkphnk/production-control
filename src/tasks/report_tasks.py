@@ -37,7 +37,6 @@ async def generate_batch_report(
         products = await product_service.get_by_batch_id(batch_id)
         file_name = None
         try:
-            # TODO: PDF GENERATE
             if format == 'excel':
                 from openpyxl import Workbook
                 from openpyxl.utils import get_column_letter

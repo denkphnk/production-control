@@ -204,3 +204,6 @@ async def export_batches(data: BatchExportRequest, service: BatchService = Depen
         format=data.format
         )
 
+@batches_router.get('/{batch_id}/import')
+async def import_batch(batch_id: int, file_path: str, service: BatchService = Depends(get_batch_service)):
+    return await service.import_batches(batch_id, file_path)

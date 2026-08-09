@@ -146,7 +146,6 @@ async def export_batches_to_file(
             "total_batches": 150
         }
     """
-    print("EXPORT STARTED")
     async with AsyncSessionLocal() as session:
         batch_service = BatchService(session)
         file_name = None
