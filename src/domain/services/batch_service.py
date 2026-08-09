@@ -257,3 +257,12 @@ class BatchService:
         return {
             "task_id": task.id
         }
+
+    async def import_batch(self, file_path: str):
+        from src.tasks.batch_tasks import import_batches_from_file
+
+        task = import_batches_from_file.delay(file_path)
+
+        return {
+            "task_id": task.id
+        }
