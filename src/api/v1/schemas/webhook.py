@@ -1,7 +1,7 @@
 from datetime import datetime
 from typing import List, Optional
 
-from pydantic import BaseModel, Field, HttpUrl
+from pydantic import BaseModel, ConfigDict, Field, HttpUrl
 
 
 class WebhookCreate(BaseModel):
@@ -39,6 +39,8 @@ class WebhookResponse(BaseModel):
     created_at: datetime = Field(..., description='Дата создания')
     updated_at: datetime = Field(..., description='Дата обновления')
 
+    model_config = ConfigDict(from_attributes=True)
+
 class WebhookDeliveryResponse(BaseModel):
     """Доставка в ответе"""
     id: int = Field(..., ge=1, description='ID доставки')
@@ -49,6 +51,7 @@ class WebhookDeliveryResponse(BaseModel):
     created_at: datetime = Field(..., description='Дата создания')
     delivered_at: Optional[datetime] = Field(None, description='Дата успешной доставки')
 
+    model_config = ConfigDict(from_attributes=True)
 
 class PaginatedDeliveriesResponse(BaseModel):
     """История доставок с пагинацией"""

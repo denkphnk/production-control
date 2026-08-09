@@ -1,7 +1,7 @@
-import asyncio
 import hashlib
 import hmac
 import json
+from fastapi.encoders import jsonable_encoder
 import httpx
 
 from typing import Any, Dict, List, Optional, Tuple
@@ -32,14 +32,15 @@ class WebhookService:
     async def create(self, data: WebhookCreate) -> WebhookSubscription:
         """Создает подписку"""
         data = data.model_dump()
+        data["url"] = str(data['url'])
 
         existing = await self.webhook_repo.get_by_url(data["url"])
         if existing:
-            raise ValueError(f"Webhook with URL {data.url} already exists")
+            raise ValueError(f"Webhook with URL {data['url']} already exists")
         try:
             subscription = await self.webhook_repo.create(data)
-            self.session.commit()
-            self.session.refresh()
+            await self.session.commit()
+            self.session.refresh(subscription)
             return subscription
         except Exception:
             await self.session.rollback()
@@ -107,6 +108,9 @@ class WebhookService:
         self, event_type: str, payload: Dict[str, Any], async_mode: bool
     ) -> None:
         """Отправляет событие всем подписчикам"""
+        from src.tasks.webhook_tasks import send_webhook_delivery
+
+
         subscriptions = await self.webhook_repo.get_active_subscriptions_for_event(
             event_type
         )
@@ -116,31 +120,30 @@ class WebhookService:
 
         webhook_payload = {
             "event": event_type,
-            "data": payload,
+            "data": jsonable_encoder(payload),
             "timestamp": datetime.now(timezone.utc).isoformat(),
         }
 
         for subscription in subscriptions:
+            delivery = await self.webhook_repo.create_delivery(
+                {
+                    "subscription_id": subscription.id,
+                    "event_type": webhook_payload["event"],
+                    "payload": webhook_payload,
+                    "status": "pending",
+                    "attempts": 0,
+                }
+            )
+            await self.session.commit()
             if async_mode:
-                asyncio.create_task(
-                    self._send_to_subscriber(subscription, webhook_payload)
-                )
+                send_webhook_delivery.delay(delivery.id)
             else:
-                await self._send_to_subscriber(subscription, webhook_payload)
+                await self._send_to_subscriber(delivery, subscription, webhook_payload)
 
     async def _send_to_subscriber(
-        self, subscription: WebhookSubscription, payload: Dict[str, Any]
+        self, delivery: WebhookDelivery, subscription: WebhookSubscription, payload: Dict[str, Any]
     ) -> None:
         """Отправляет событие подписчику"""
-        delivery = await self.webhook_repo.create_delivery(
-            {
-                "subscription_id": subscription.id,
-                "event_type": payload["event"],
-                "payload": payload,
-                "status": "pending",
-                "attempts": 0,
-            }
-        )
         try:
             signature = self._create_signature(payload, subscription.secret_key)
 
@@ -173,10 +176,6 @@ class WebhookService:
                 error_message=f"Timeout after {subscription.timeout}s",
             )
 
-        except Exception as e:
-            await self._save_delivery_result(
-                delivery_id=delivery.id, status="failed", error_message=str(e)
-            )
 
     def _create_signature(self, payload: Dict[str, Any], secret_key: str) -> str:
         """Создает HMAC-SHA256 подпись для вебхука"""

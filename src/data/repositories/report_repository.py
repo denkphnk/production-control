@@ -1,3 +1,4 @@
+from datetime import datetime
 from typing import List, Optional
 
 from sqlalchemy import select
@@ -27,3 +28,12 @@ class ReportRepository(BaseRepository[Report]):
         res = await self.session.execute(query)
 
         return res.scalar_one_or_none()
+
+    async def get_older_than(self, date: datetime) -> List[Report]:
+        query = (
+            select(self.model)
+            .where(self.model.created_at > date)
+        )
+        res = await self.session.execute(query)
+
+        return res.scalars().all()

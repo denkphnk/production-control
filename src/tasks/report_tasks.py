@@ -1,6 +1,7 @@
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 import os
 
+from src.domain.services.webhook_service import WebhookService
 from src.domain.services.batch_service import BatchService
 from src.domain.services.product_service import ProductService
 from src.domain.services.report_service import ReportService
@@ -19,6 +20,7 @@ async def generate_batch_report(
         report_service = ReportService(session)
         batch_service = BatchService(session)
         product_service = ProductService(session)
+        webhook_service = WebhookService(session)
 
         batch = await batch_service.get_by_id(batch_id)
         if batch is None:
@@ -143,17 +145,30 @@ async def generate_batch_report(
             else:
                 pass
                             
-            minio_service.upload_file(
+            file_url = minio_service.upload_file(
                 bucket='reports',
                 object_name=file_name,
                 file_path=file_name
             )
+
+            expires_at = datetime.now(timezone.utc) + timedelta(days=7)
 
             report.status = 'completed'
             report.file_name = file_name
             report.file_path = file_name
             await session.commit()
             await session.refresh(report)
+
+            await webhook_service.send_event(
+                "report_generated",
+                {
+                    "batch_id": batch.id,
+                    "report_type": format,
+                    "file_url": file_url,
+                    "expires_at": expires_at.isoformat()
+                },
+                async_mode=False
+            )
         except Exception:
             report.status = 'failed'
             await session.commit()

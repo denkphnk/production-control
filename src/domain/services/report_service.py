@@ -31,6 +31,8 @@ class ReportService:
         await self.session.commit()
         generate_batch_report.delay(batch.id)
 
+
+        
         return report
 
     async def get_report(self, report_id: int) -> Report:

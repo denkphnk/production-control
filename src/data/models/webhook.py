@@ -1,3 +1,4 @@
+from pydantic import ConfigDict
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy import DateTime, JSON, ForeignKey, ARRAY, String
 
@@ -24,6 +25,8 @@ class WebhookSubscription(Base):
 
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=datetime.now)
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=datetime.now, onupdate=datetime.now)
+
+    model_config = ConfigDict(from_attributes=True)
 
 
 class WebhookDelivery(Base):

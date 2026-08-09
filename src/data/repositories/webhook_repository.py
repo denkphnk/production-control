@@ -127,3 +127,14 @@ class WebhookRepository(BaseRepository[WebhookSubscription]):
         total = await self.session.execute(total_query)
 
         return res.scalars().all(), total.scalar()
+
+    async def get_delivery_by_id(
+    self,
+    delivery_id: int
+    ) -> WebhookDelivery | None:
+        stmt = select(WebhookDelivery).where(
+            WebhookDelivery.id == delivery_id
+        )
+
+        result = await self.session.execute(stmt)
+        return result.scalar_one_or_none()
