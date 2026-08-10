@@ -1,10 +1,10 @@
 from celery import Celery
 from celery.schedules import crontab
+
 from src.core.config import settings
 
-
 celery_app = Celery(
-    'production_control',
+    "production_control",
     broker=settings.CELERY_BROKER_URL,
     backend=settings.CELERY_RESULT_BACKEND,
     include=[
@@ -46,5 +46,5 @@ celery_app.conf.beat_schedule = {
     },
 }
 
-if __name__ == '__main__':
-    celery_app.start() 
+if __name__ == "__main__":
+    celery_app.start()

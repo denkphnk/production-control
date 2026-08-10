@@ -1,5 +1,5 @@
-from datetime import datetime, date
-from typing import Optional, Literal
+from datetime import date, datetime
+from typing import Literal
 
 from pydantic import BaseModel, ConfigDict
 
@@ -8,29 +8,31 @@ class ReportResponse(BaseModel):
     id: int
     status: str
     created_at: datetime
-    file_name: Optional[str] = None
+    file_name: str | None = None
 
     model_config = ConfigDict(from_attributes=True)
+
 
 class DownloadUrlResponse(BaseModel):
     url: str
 
+
 class BatchExportFilters(BaseModel):
-    is_closed: Optional[bool] = None
-    batch_number: Optional[int] = None
-    batch_date: Optional[date] = None
+    is_closed: bool | None = None
+    batch_number: int | None = None
+    batch_date: date | None = None
 
-    work_center_id: Optional[int] = None
-    work_center_identifier: Optional[str] = None
+    work_center_id: int | None = None
+    work_center_identifier: str | None = None
 
-    shift: Optional[str] = None
-    team: Optional[str] = None
+    shift: str | None = None
+    team: str | None = None
 
-    nomenclature: Optional[str] = None
-    ekn_code: Optional[str] = None
+    nomenclature: str | None = None
+    ekn_code: str | None = None
 
-    date_from: Optional[date] = None
-    date_to: Optional[date] = None
+    date_from: date | None = None
+    date_to: date | None = None
 
 
 class BatchExportRequest(BaseModel):

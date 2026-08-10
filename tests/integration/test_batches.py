@@ -1,7 +1,5 @@
 import pytest
-
 from httpx import AsyncClient
-from datetime import date, datetime, timezone
 
 
 class TestBatches:
@@ -384,10 +382,7 @@ class TestBatches:
         """Тест агрегации уже агрегированной продукции"""
         product = await client.post(
             "/api/v1/products/",
-            json={
-                "unique_code": '22222',
-                "batch_id": create_batch.id
-            },
+            json={"unique_code": "22222", "batch_id": create_batch.id},
         )
 
         aggregate_product = await client.post(

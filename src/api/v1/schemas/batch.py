@@ -1,7 +1,6 @@
-from typing import List, Optional
+from datetime import date, datetime
 
 from pydantic import BaseModel, ConfigDict, Field, ValidationInfo, field_validator
-from datetime import datetime, date
 
 from src.api.v1.schemas.workcenter import WorkCenterInBatchResponse
 
@@ -15,9 +14,9 @@ class ProductInBatchResponse(BaseModel):
     id: int = Field(..., ge=1, description="ID продукции")
     unique_code: str = Field(..., min_length=1, description="Уникальный код продукции")
     is_aggregated: bool = Field(..., description="Статус агрегации")
-    aggregated_at: Optional[datetime] = Field(None, description="Дата агрегации")
+    aggregated_at: datetime | None = Field(None, description="Дата агрегации")
 
-    model_config=ConfigDict(from_attributes=True)
+    model_config = ConfigDict(from_attributes=True)
 
 
 ##########################################
@@ -97,31 +96,27 @@ class BatchUpdate(BaseModel):
     Используется в PATCH /api/v1/batches/{batch_id}
     """
 
-    is_closed: Optional[bool] = Field(None, description="Статус закрытия партии")
-    task_description: Optional[str] = Field(
+    is_closed: bool | None = Field(None, description="Статус закрытия партии")
+    task_description: str | None = Field(
         None, min_length=1, max_length=1000, description="Описание задания"
     )
-    work_center_id: Optional[int] = Field(None, ge=1, description="ID рабочего центра")
-    shift: Optional[str] = Field(
+    work_center_id: int | None = Field(None, ge=1, description="ID рабочего центра")
+    shift: str | None = Field(
         None, min_length=1, max_length=50, description="Номер смены"
     )
-    team: Optional[str] = Field(
+    team: str | None = Field(
         None, min_length=1, max_length=50, description="Название бригады"
     )
-    batch_number: Optional[int] = Field(None, ge=1, description="Номер партии")
-    batch_date: Optional[date] = Field(None, description="Дата партии")
-    nomenclature: Optional[str] = Field(
+    batch_number: int | None = Field(None, ge=1, description="Номер партии")
+    batch_date: date | None = Field(None, description="Дата партии")
+    nomenclature: str | None = Field(
         None, min_length=1, max_length=200, description="Наименование продукта"
     )
-    ekn_code: Optional[str] = Field(
+    ekn_code: str | None = Field(
         None, min_length=1, max_length=50, description="Код ЕКН"
     )
-    shift_start: Optional[datetime] = Field(
-        None, description="Дата и время начала смены"
-    )
-    shift_end: Optional[datetime] = Field(
-        None, description="Дата и время окончания смены"
-    )
+    shift_start: datetime | None = Field(None, description="Дата и время начала смены")
+    shift_end: datetime | None = Field(None, description="Дата и время окончания смены")
 
     model_config = ConfigDict(from_attributes=True, str_strip_whitespace=True)
 
@@ -132,8 +127,8 @@ class BatchUpdate(BaseModel):
     @field_validator("shift_end")
     @classmethod
     def validate_shift_end(
-        cls, v: Optional[datetime], info: ValidationInfo
-    ) -> Optional[datetime]:
+        cls, v: datetime | None, info: ValidationInfo
+    ) -> datetime | None:
         """Проверяет, что окончание смены позже начала"""
         if v is not None:
             start = info.data.get("shift_start")
@@ -144,7 +139,7 @@ class BatchUpdate(BaseModel):
 
     @field_validator("batch_date")
     @classmethod
-    def validate_batch_date(cls, v: Optional[date]) -> Optional[date]:
+    def validate_batch_date(cls, v: date | None) -> date | None:
         if v is not None:
             if v > date.today():
                 raise ValueError("batch_date cannot be in the future")
@@ -161,14 +156,16 @@ class BatchDetailResponse(BaseModel):
     is_closed: bool = Field(..., description="Статус закрытия смены")
     batch_number: int = Field(..., description="Номер партии")
     batch_date: date = Field(..., description="Дата партии")
-    products: List[ProductInBatchResponse] = Field(
+    products: list[ProductInBatchResponse] = Field(
         default_factory=list, description="Список продукции"
     )
 
     model_config = ConfigDict(from_attributes=True)
 
+
 class BatchFullResponse(BatchDetailResponse):
     """Полная информация о партии (для GET и PATCH)."""
+
     task_description: str
     work_center_id: int
     shift: str
@@ -177,118 +174,84 @@ class BatchFullResponse(BatchDetailResponse):
     ekn_code: str
     shift_start: datetime
     shift_end: datetime
-    closed_at: Optional[datetime]
+    closed_at: datetime | None
     created_at: datetime
     updated_at: datetime
-    work_center: Optional[WorkCenterInBatchResponse] = None
-    
+    work_center: WorkCenterInBatchResponse | None = None
+
     model_config = ConfigDict(from_attributes=True)
+
 
 ##########################################
 # СТАТИСТИКА
 ##########################################
 class BatchInfoResponse(BaseModel):
-    id: int = Field(
-        ...,
-        description="Уникальный идентификатор партии"
-    )
+    id: int = Field(..., description="Уникальный идентификатор партии")
 
-    batch_number: int = Field(
-        ...,
-        description="Номер партии"
-    )
+    batch_number: int = Field(..., description="Номер партии")
 
-    batch_date: date = Field(
-        ...,
-        description="Дата партии"
-    )
+    batch_date: date = Field(..., description="Дата партии")
 
-    is_closed: bool = Field(
-        ...,
-        description="Признак закрытия партии"
-    )
+    is_closed: bool = Field(..., description="Признак закрытия партии")
 
 
 class ProductionStatsResponse(BaseModel):
-    total_products: int = Field(
-        ...,
-        description="Общее количество продукции в партии"
-    )
+    total_products: int = Field(..., description="Общее количество продукции в партии")
 
-    aggregated: int = Field(
-        ...,
-        description="Количество агрегированной продукции"
-    )
+    aggregated: int = Field(..., description="Количество агрегированной продукции")
 
     remaining: int = Field(
-        ...,
-        description="Количество продукции, оставшейся для агрегации"
+        ..., description="Количество продукции, оставшейся для агрегации"
     )
 
-    aggregation_rate: float = Field(
-        ...,
-        description="Процент выполнения агрегации"
-    )
+    aggregation_rate: float = Field(..., description="Процент выполнения агрегации")
 
 
 class TimelineResponse(BaseModel):
     shift_duration_hours: float = Field(
-        ...,
-        description="Полная продолжительность смены в часах"
+        ..., description="Полная продолжительность смены в часах"
     )
 
     elapsed_hours: float = Field(
-        ...,
-        description="Количество часов, прошедших с начала смены"
+        ..., description="Количество часов, прошедших с начала смены"
     )
 
     products_per_hour: float = Field(
-        ...,
-        description="Средняя скорость агрегации продукции в час"
+        ..., description="Средняя скорость агрегации продукции в час"
     )
 
     estimated_completion: datetime | None = Field(
-        None,
-        description="Прогнозируемое время завершения агрегации"
+        None, description="Прогнозируемое время завершения агрегации"
     )
 
 
 class TeamPerformanceResponse(BaseModel):
-    team: str = Field(
-        ...,
-        description="Название бригады"
-    )
+    team: str = Field(..., description="Название бригады")
 
     avg_products_per_hour: float = Field(
-        ...,
-        description="Среднее количество агрегированной продукции в час"
+        ..., description="Среднее количество агрегированной продукции в час"
     )
 
     efficiency_score: float = Field(
-        ...,
-        description="Оценка эффективности работы бригады"
+        ..., description="Оценка эффективности работы бригады"
     )
 
 
 class BatchStatisticsResponse(BaseModel):
     batch_info: BatchInfoResponse = Field(
-        ...,
-        description="Основная информация о партии"
+        ..., description="Основная информация о партии"
     )
 
     production_stats: ProductionStatsResponse = Field(
-        ...,
-        description="Статистика продукции и агрегации"
+        ..., description="Статистика продукции и агрегации"
     )
 
     timeline: TimelineResponse = Field(
-        ...,
-        description="Временные показатели выполнения партии"
+        ..., description="Временные показатели выполнения партии"
     )
 
     team_performance: TeamPerformanceResponse = Field(
-        ...,
-        description="Показатели эффективности бригады"
+        ..., description="Показатели эффективности бригады"
     )
 
 
@@ -301,13 +264,13 @@ class BatchFilters(BaseModel):
     GET /api/v1/batches
     """
 
-    is_closed: Optional[bool] = Field(None, description="Статус закрытия смены")
-    work_center_id: Optional[int] = Field(None, ge=1, description="ID рабочего центра")
-    shift: Optional[str] = Field(
+    is_closed: bool | None = Field(None, description="Статус закрытия смены")
+    work_center_id: int | None = Field(None, ge=1, description="ID рабочего центра")
+    shift: str | None = Field(
         None, min_length=1, max_length=50, description="Номер смены"
     )
-    batch_number: Optional[int] = Field(None, ge=1, description="Номер партии")
-    batch_date: Optional[date] = Field(None, description="Дата партии")
+    batch_number: int | None = Field(None, ge=1, description="Номер партии")
+    batch_date: date | None = Field(None, description="Дата партии")
 
     model_config = ConfigDict(str_strip_whitespace=True, extra="forbid")
 
@@ -349,7 +312,7 @@ class BatchListItemResponse(BaseModel):
 
 
 class PaginatedBatchResponse(BaseModel):
-    items: List[BatchListItemResponse] = Field(..., description="Список партий")
+    items: list[BatchListItemResponse] = Field(..., description="Список партий")
     total: int = Field(..., ge=0, description="Количество партий")
     offset: int = Field(..., ge=0, description="Текущее смещение")
     limit: int = Field(..., ge=1, le=100, description="Текущий лимит")
@@ -365,6 +328,7 @@ class PaginatedBatchResponse(BaseModel):
             limit=limit,
             has_more=len(items) + offset < total,
         )
+
 
 ##########################################
 # АГРЕГАЦИЯ ПРОДУКЦИИ

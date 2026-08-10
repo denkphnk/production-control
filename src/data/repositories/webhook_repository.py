@@ -1,11 +1,10 @@
-from typing import Optional, List, Dict, Any, Tuple
-from sqlalchemy.ext.asyncio import AsyncSession
+from typing import Any
+
 from sqlalchemy import func, select
-
-
+from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
-from src.data.models.webhook import WebhookSubscription, WebhookDelivery
+from src.data.models.webhook import WebhookDelivery, WebhookSubscription
 from src.data.repositories.base_repository import BaseRepository
 
 
@@ -18,7 +17,7 @@ class WebhookRepository(BaseRepository[WebhookSubscription]):
     ##########################################
     # ПОИСК ПО URL
     ##########################################
-    async def get_by_url(self, url: str) -> Optional[WebhookSubscription]:
+    async def get_by_url(self, url: str) -> WebhookSubscription | None:
         """Ищет подписку по URL"""
         query = select(self.model).where(self.model.url == url)
 
@@ -28,7 +27,7 @@ class WebhookRepository(BaseRepository[WebhookSubscription]):
     ##########################################
     # СОЗДАНИЕ DELIVERY
     ##########################################
-    async def create_delivery(self, data: Dict[str, Any]) -> WebhookDelivery:
+    async def create_delivery(self, data: dict[str, Any]) -> WebhookDelivery:
         """Создает запись в таблице webhook_deliveries о попытке отправки"""
         delivery = WebhookDelivery(**data)
         self.session.add(delivery)
@@ -38,7 +37,7 @@ class WebhookRepository(BaseRepository[WebhookSubscription]):
     ##########################################
     # ПОИСК FAILED DELIVERY
     ##########################################
-    async def get_failed_deliveries(self, limit: int = 20) -> List[WebhookDelivery]:
+    async def get_failed_deliveries(self, limit: int = 20) -> list[WebhookDelivery]:
         """Находит доставки со статусом failed, которые можно попробовать отправить снова"""
         query = (
             select(WebhookDelivery)
@@ -60,7 +59,7 @@ class WebhookRepository(BaseRepository[WebhookSubscription]):
     ##########################################
     async def get_active_subscriptions_for_event(
         self, event_type: str
-    ) -> List[WebhookSubscription]:
+    ) -> list[WebhookSubscription]:
         """Находит все активные подписки, которые подписаны на конкретное событие"""
         query = select(self.model).where(
             self.model.is_active, self.model.events.any(event_type)
@@ -74,7 +73,7 @@ class WebhookRepository(BaseRepository[WebhookSubscription]):
     ##########################################
     async def get_deliveries_for_subscription(
         self, subscription_id: int, offset: int = 0, limit: int = 20
-    ) -> Tuple[List[WebhookDelivery], int]:
+    ) -> tuple[list[WebhookDelivery], int]:
         """Возвращает историю доставок для конкретной подписки с пагинацией"""
         query = (
             select(WebhookDelivery)
@@ -98,7 +97,7 @@ class WebhookRepository(BaseRepository[WebhookSubscription]):
     ##########################################
     async def get_with_deliveries(
         self, subscription_id: int
-    ) -> Optional[WebhookSubscription]:
+    ) -> WebhookSubscription | None:
         """Получает подписку и сразу подгружает всю историю ее доставок"""
         query = (
             select(self.model)
@@ -118,7 +117,7 @@ class WebhookRepository(BaseRepository[WebhookSubscription]):
     ##########################################
     async def get_all_with_count(
         self, offset: int = 0, limit: int = 20
-    ) -> Tuple[List[WebhookSubscription], int]:
+    ) -> tuple[list[WebhookSubscription], int]:
         """Отдает список всех подписок с подсчетом"""
         query = select(self.model).offset(offset).limit(limit)
         total_query = select(func.count()).select_from(self.model)
@@ -128,13 +127,8 @@ class WebhookRepository(BaseRepository[WebhookSubscription]):
 
         return res.scalars().all(), total.scalar()
 
-    async def get_delivery_by_id(
-    self,
-    delivery_id: int
-    ) -> WebhookDelivery | None:
-        stmt = select(WebhookDelivery).where(
-            WebhookDelivery.id == delivery_id
-        )
+    async def get_delivery_by_id(self, delivery_id: int) -> WebhookDelivery | None:
+        stmt = select(WebhookDelivery).where(WebhookDelivery.id == delivery_id)
 
         result = await self.session.execute(stmt)
         return result.scalar_one_or_none()

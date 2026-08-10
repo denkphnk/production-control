@@ -1,9 +1,8 @@
-from typing import Optional, List, Dict, Any, Tuple
-from sqlalchemy.ext.asyncio import AsyncSession
+from datetime import date, datetime, timedelta, timezone
+from typing import Any
+
 from sqlalchemy import String, cast, func, or_, select
-
-from datetime import datetime, timedelta, timezone, date
-
+from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import joinedload, selectinload
 
 from src.data.models.batch import Batch
@@ -21,7 +20,7 @@ class BatchRepository(BaseRepository[Batch]):
     ##########################################
     # ПОИСК ПО BATCH_ID
     ##########################################
-    async def get_by_id_with_relations(self, batch_id: int) -> Optional[Batch]:
+    async def get_by_id_with_relations(self, batch_id: int) -> Batch | None:
         """Получает партию с подгрузкой work_center и products"""
         query = (
             select(self.model)
@@ -39,7 +38,7 @@ class BatchRepository(BaseRepository[Batch]):
     ##########################################
     async def get_by_batch_number_and_date(
         self, batch_number: int, batch_date: date
-    ) -> Optional[Batch]:
+    ) -> Batch | None:
         """Получает партию по номеру и дате"""
         query = select(self.model).where(
             self.model.batch_number == batch_number, self.model.batch_date == batch_date
@@ -52,7 +51,7 @@ class BatchRepository(BaseRepository[Batch]):
     # ПРОВЕРКА УНИКАЛЬНОСТИ
     ##########################################
     async def is_batch_number_unique(
-        self, batch_number: int, batch_date: date, exclude_id: Optional[int]
+        self, batch_number: int, batch_date: date, exclude_id: int | None
     ) -> bool:
         """Проверяет, уникальна ли комбинация номер + дата"""
         query = (
@@ -73,7 +72,7 @@ class BatchRepository(BaseRepository[Batch]):
     ##########################################
     # НАХОДИТ ПАРТИИ КОТОРЫЕ ПОРА ЗАКРЫТЬ
     ##########################################
-    async def get_expired_batches(self) -> List[int]:
+    async def get_expired_batches(self) -> list[int]:
         """Находит все партии, которые пора закрыть — смена уже закончилась, а партия еще не закрыта"""
         now = datetime.now(timezone.utc)
         query = select(self.model.id).where(
@@ -86,7 +85,7 @@ class BatchRepository(BaseRepository[Batch]):
     ##########################################
     # СТАТИСТИКА АГГРЕГАЦИИ
     ##########################################
-    async def get_batch_aggregation_stats(self, batch_id: int) -> Dict[str, Any]:
+    async def get_batch_aggregation_stats(self, batch_id: int) -> dict[str, Any]:
         """Считает статистику агрегации для партии, используя данные из таблицы products"""
         batch = await self.get_by_id(batch_id)
         if not batch:
@@ -123,14 +122,14 @@ class BatchRepository(BaseRepository[Batch]):
             "aggregation_rate": rate,
         }
 
-    async def get_batch_full_stats(self, batch_id: int) -> Dict[str, Any]:
+    async def get_batch_full_stats(self, batch_id: int) -> dict[str, Any]:
         batch = await self.get_by_id(batch_id)
         if not batch:
             return {
                 "batch_info": {},
                 "production_stats": {},
                 "timeline": {},
-                "team_performance": {}
+                "team_performance": {},
             }
 
         # BATCH_INFO
@@ -145,9 +144,15 @@ class BatchRepository(BaseRepository[Batch]):
         production_stats = await self.get_batch_aggregation_stats(batch_id)
 
         # TIMELINE
-        shift_duration_hours = (batch.shift_end - batch.shift_start).total_seconds() / 3600
+        shift_duration_hours = (
+            batch.shift_end - batch.shift_start
+        ).total_seconds() / 3600
 
-        elapsed_end = batch.closed_at if batch.closed_at else min(batch.shift_end, datetime.now(timezone.utc))
+        elapsed_end = (
+            batch.closed_at
+            if batch.closed_at
+            else min(batch.shift_end, datetime.now(timezone.utc))
+        )
         elapsed_hours = (elapsed_end - batch.shift_start).total_seconds() / 3600
 
         query_aggregated = (
@@ -156,14 +161,16 @@ class BatchRepository(BaseRepository[Batch]):
             .where(Product.batch_id == batch_id, Product.is_aggregated)
         )
 
-        aggregated = production_stats['aggregated']
+        aggregated = production_stats["aggregated"]
         products_per_hour = aggregated / elapsed_hours if elapsed_hours else 0
 
-        if aggregated == production_stats['total_products']:
+        if aggregated == production_stats["total_products"]:
             estimated_completion = None
         else:
-            remaining_hours = production_stats['remaining'] / products_per_hour
-            estimated_completion = datetime.now(timezone.utc) + timedelta(hours=remaining_hours)
+            remaining_hours = production_stats["remaining"] / products_per_hour
+            estimated_completion = datetime.now(timezone.utc) + timedelta(
+                hours=remaining_hours
+            )
 
         timeline = {
             "shift_duration_hours": round(shift_duration_hours, 2),
@@ -180,7 +187,7 @@ class BatchRepository(BaseRepository[Batch]):
         team_performance = {
             "team": team,
             "avg_products_per_hour": round(avg_products_per_hour, 2),
-            "efficiency_score": round(efficiency_score, 2)
+            "efficiency_score": round(efficiency_score, 2),
         }
 
         return {
@@ -189,13 +196,13 @@ class BatchRepository(BaseRepository[Batch]):
             "timeline": timeline,
             "team_performance": team_performance,
         }
-        
+
     ##########################################
     # ПОИСК
     ##########################################
     async def search(
         self, search_term: str, offset: int = 0, limit: int = 20
-    ) -> Tuple[List[Batch], int]:
+    ) -> tuple[list[Batch], int]:
         """Глобальный поиск по партиям"""
         query = select(self.model)
         if search_term and search_term.strip():
@@ -235,9 +242,8 @@ class BatchRepository(BaseRepository[Batch]):
     # ПОИСК С ДИНАМИЧЕСКОЙ ФИЛЬТРАЦИЕЙ
     ##########################################
     async def get_list_by_filters(
-        self,
-        data: Dict[str, Any]
-    ) -> Tuple[List[Batch], int]:
+        self, data: dict[str, Any]
+    ) -> tuple[list[Batch], int]:
         """Возвращает список партий с динамическими фильтрами и пагинацией"""
         query = select(self.model)
         total_query = select(func.count()).select_from(self.model)

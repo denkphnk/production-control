@@ -1,6 +1,5 @@
 from datetime import datetime, timezone
-import os
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -9,8 +8,9 @@ from src.data.models.product import Product
 from src.data.repositories.batch_repository import BatchRepository
 from src.data.repositories.product_repository import ProductRepository
 from src.data.repositories.workcenter_repository import WorkCenterRepository
-from src.domain.schemas.batch import BatchListRequest, BatchCreate, BatchUpdate
+from src.domain.schemas.batch import BatchCreate, BatchListRequest, BatchUpdate
 from src.domain.services.webhook_service import WebhookService
+
 
 class BatchService:
     """Сервис для работы с партями"""
@@ -25,14 +25,14 @@ class BatchService:
     ##########################################
     # ЧТЕНИЕ ПО ID
     ##########################################
-    async def get_by_id(self, batch_id: int) -> Optional[Batch]:
+    async def get_by_id(self, batch_id: int) -> Batch | None:
         """Получает партию по ID"""
         return await self.batch_repo.get_by_id_with_relations(batch_id)
 
     ##########################################
     # ПОИСК С ДИНАМИЧЕСКОЙ ФИЛЬТРАЦИЕЙ
     ##########################################
-    async def get_list(self, data: BatchListRequest) -> Tuple[List[Batch], int]:
+    async def get_list(self, data: BatchListRequest) -> tuple[list[Batch], int]:
         """Возвращает список партий с динамическими фильтрами и пагинацией"""
         data = data.model_dump()
         return await self.batch_repo.get_list_by_filters(data)
@@ -40,10 +40,10 @@ class BatchService:
     ##########################################
     # СОЗДАНИЕ
     ##########################################
-    async def create(self, data: BatchCreate, send_webhook: bool = True ) -> Batch:
+    async def create(self, data: BatchCreate, send_webhook: bool = True) -> Batch:
         """Создает партию"""
         is_unique = await self.batch_repo.is_batch_number_unique(
-            batch_number=data.batch_number, 
+            batch_number=data.batch_number,
             batch_date=data.batch_date,
             exclude_id=None,
         )
@@ -62,7 +62,9 @@ class BatchService:
             await self.session.commit()
             await self.session.refresh(batch)
 
-            batch_with_relations = await self.batch_repo.get_by_id_with_relations(batch.id)
+            batch_with_relations = await self.batch_repo.get_by_id_with_relations(
+                batch.id
+            )
             if send_webhook:
                 await self.webhook_service.send_event(
                     "batch_created",
@@ -73,7 +75,7 @@ class BatchService:
                         "nomenclature": batch.nomenclature,
                         "work_center": wc.name if wc else None,
                     },
-                    async_mode=False
+                    async_mode=False,
                 )
             return batch_with_relations
 
@@ -98,17 +100,17 @@ class BatchService:
                 update_data["closed_at"] = None
 
         if (
-            update_data.get('batch_number') is not None
-            or update_data.get('batch_date') is not None
+            update_data.get("batch_number") is not None
+            or update_data.get("batch_date") is not None
         ):
             new_number = (
                 update_data["batch_number"]
-                if update_data.get('batch_number') is not None
+                if update_data.get("batch_number") is not None
                 else batch.batch_number
             )
             new_date = (
                 update_data["batch_date"]
-                if update_data.get('batch_date') is not None
+                if update_data.get("batch_date") is not None
                 else batch.batch_date
             )
             is_unique = await self.batch_repo.is_batch_number_unique(
@@ -123,7 +125,9 @@ class BatchService:
             batch = await self.batch_repo.update(batch_id, update_data)
             await self.session.commit()
             await self.session.refresh(batch)
-            batch_with_relations = await self.batch_repo.get_by_id_with_relations(batch_id)
+            batch_with_relations = await self.batch_repo.get_by_id_with_relations(
+                batch_id
+            )
             await self.webhook_service.send_event(
                 "batch_updated",
                 {
@@ -131,7 +135,7 @@ class BatchService:
                     "batch_number": batch.batch_number,
                     "changes": update_data,
                 },
-                async_mode=False
+                async_mode=False,
             )
             return batch_with_relations
         except Exception:
@@ -156,7 +160,9 @@ class BatchService:
             stats = await self.batch_repo.get_batch_aggregation_stats(batch_id)
             await self.session.commit()
             await self.session.refresh(batch)
-            batch_with_relations = await self.batch_repo.get_by_id_with_relations(batch_id)
+            batch_with_relations = await self.batch_repo.get_by_id_with_relations(
+                batch_id
+            )
             await self.webhook_service.send_event(
                 "batch_closed",
                 {
@@ -167,7 +173,7 @@ class BatchService:
                     else None,
                     "statistics": stats,
                 },
-                async_mode=False
+                async_mode=False,
             )
             return batch_with_relations
         except Exception:
@@ -193,7 +199,9 @@ class BatchService:
                 f"Product with unique code {unique_code} not found in batch with ID {batch_id}"
             )
         if product.is_aggregated:
-            raise ValueError(f'Product with unique_code {unique_code} already aggregated')
+            raise ValueError(
+                f"Product with unique_code {unique_code} already aggregated"
+            )
 
         try:
             product_update = await self.product_repo.update(
@@ -212,7 +220,7 @@ class BatchService:
                     if product_update.aggregated_at
                     else None,
                 },
-                async_mode=False
+                async_mode=False,
             )
             stats = await self.batch_repo.get_batch_aggregation_stats(batch_id)
             if stats["remaining"] == 0:
@@ -225,15 +233,14 @@ class BatchService:
     ##########################################
     # СТАТИСТИКА
     ##########################################
-    async def get_statistics(self, batch_id: int) -> Dict[str, Any]:
+    async def get_statistics(self, batch_id: int) -> dict[str, Any]:
         """Возвращает статистику агрегации для партии"""
         return await self.batch_repo.get_batch_aggregation_stats(batch_id)
 
-    async def get_full_statistics(self, batch_id: int) -> Dict[str, Any]:
+    async def get_full_statistics(self, batch_id: int) -> dict[str, Any]:
         """Возвращает полную статистику партии"""
         return await self.batch_repo.get_batch_full_stats(batch_id)
 
-    
     ##########################################
     # ЗАКРЫТИЕ ПАРТИЙ У КОТОРЫХ SHIFT_END < NOW
     ##########################################
@@ -241,34 +248,25 @@ class BatchService:
         """Закрывает просроченные партии"""
         batches = await self.batch_repo.get_expired_batches()
 
-        closed = await self.batch_repo.update_many(ids=batches, data={"is_closed": True})
+        closed = await self.batch_repo.update_many(
+            ids=batches, data={"is_closed": True}
+        )
         await self.session.commit()
 
         return len(closed)
 
-    async def export_batches(
-        self,
-        filters: Dict[str, Any],
-        format: str
-    ):
+    async def export_batches(self, filters: dict[str, Any], format: str):
         from src.tasks.batch_tasks import export_batches_to_file
 
         task = export_batches_to_file.delay(filters, format)
 
-        return {
-            "task_id": task.id
-        }
+        return {"task_id": task.id}
 
-    async def import_batches(self, data: Dict[str, Any]):
+    async def import_batches(self, data: dict[str, Any]):
         from src.tasks.batch_tasks import import_batches_from_file
 
-        
         task = import_batches_from_file.delay(
-            file_url=data["url"],
-            object_name=data["object_name"]
+            file_url=data["url"], object_name=data["object_name"]
         )
 
-        return {
-            "task_id": task.id,
-            'status': 'PENDING'
-        }
+        return {"task_id": task.id, "status": "PENDING"}

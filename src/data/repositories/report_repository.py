@@ -1,5 +1,4 @@
 from datetime import datetime
-from typing import List, Optional
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -12,13 +11,13 @@ class ReportRepository(BaseRepository[Report]):
     def __init__(self, session: AsyncSession):
         super().__init__(Report, session)
 
-    async def get_by_batch_id(self, batch_id: int) -> List[Report]:
+    async def get_by_batch_id(self, batch_id: int) -> list[Report]:
         query = select(self.model).where(self.model.batch_id == batch_id)
         res = await self.session.execute(query)
 
         return res.scalars().all()
 
-    async def get_last_report(self, batch_id: int) -> Optional[Report]:
+    async def get_last_report(self, batch_id: int) -> Report | None:
         query = (
             select(self.model)
             .where(self.model.batch_id == batch_id)
@@ -29,11 +28,8 @@ class ReportRepository(BaseRepository[Report]):
 
         return res.scalar_one_or_none()
 
-    async def get_older_than(self, date: datetime) -> List[Report]:
-        query = (
-            select(self.model)
-            .where(self.model.created_at > date)
-        )
+    async def get_older_than(self, date: datetime) -> list[Report]:
+        query = select(self.model).where(self.model.created_at > date)
         res = await self.session.execute(query)
 
         return res.scalars().all()

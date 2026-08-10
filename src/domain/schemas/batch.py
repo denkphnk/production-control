@@ -2,7 +2,6 @@
 # СПИСОК ПАРТИЙ С ФИЛЬТРАЦИЕЙ
 ##########################################
 from datetime import date, datetime
-from typing import Optional
 
 from pydantic import BaseModel, ConfigDict, Field, ValidationInfo, field_validator
 
@@ -83,31 +82,27 @@ class BatchUpdate(BaseModel):
     Используется в PATCH /api/v1/batches/{batch_id}
     """
 
-    is_closed: Optional[bool] = Field(None, description="Статус закрытия партии")
-    task_description: Optional[str] = Field(
+    is_closed: bool | None = Field(None, description="Статус закрытия партии")
+    task_description: str | None = Field(
         None, min_length=1, max_length=1000, description="Описание задания"
     )
-    work_center_id: Optional[int] = Field(None, ge=1, description="ID рабочего центра")
-    shift: Optional[str] = Field(
+    work_center_id: int | None = Field(None, ge=1, description="ID рабочего центра")
+    shift: str | None = Field(
         None, min_length=1, max_length=50, description="Номер смены"
     )
-    team: Optional[str] = Field(
+    team: str | None = Field(
         None, min_length=1, max_length=50, description="Название бригады"
     )
-    batch_number: Optional[int] = Field(None, ge=1, description="Номер партии")
-    batch_date: Optional[date] = Field(None, description="Дата партии")
-    nomenclature: Optional[str] = Field(
+    batch_number: int | None = Field(None, ge=1, description="Номер партии")
+    batch_date: date | None = Field(None, description="Дата партии")
+    nomenclature: str | None = Field(
         None, min_length=1, max_length=200, description="Наименование продукта"
     )
-    ekn_code: Optional[str] = Field(
+    ekn_code: str | None = Field(
         None, min_length=1, max_length=50, description="Код ЕКН"
     )
-    shift_start: Optional[datetime] = Field(
-        None, description="Дата и время начала смены"
-    )
-    shift_end: Optional[datetime] = Field(
-        None, description="Дата и время окончания смены"
-    )
+    shift_start: datetime | None = Field(None, description="Дата и время начала смены")
+    shift_end: datetime | None = Field(None, description="Дата и время окончания смены")
 
     model_config = ConfigDict(from_attributes=True, str_strip_whitespace=True)
 
@@ -118,8 +113,8 @@ class BatchUpdate(BaseModel):
     @field_validator("shift_end")
     @classmethod
     def validate_shift_end(
-        cls, v: Optional[datetime], info: ValidationInfo
-    ) -> Optional[datetime]:
+        cls, v: datetime | None, info: ValidationInfo
+    ) -> datetime | None:
         """Проверяет, что окончание смены позже начала"""
         if v is not None:
             start = info.data.get("shift_start")
@@ -130,7 +125,7 @@ class BatchUpdate(BaseModel):
 
     @field_validator("batch_date")
     @classmethod
-    def validate_batch_date(cls, v: Optional[date]) -> Optional[date]:
+    def validate_batch_date(cls, v: date | None) -> date | None:
         if v is not None:
             if v > date.today():
                 raise ValueError("batch_date cannot be in the future")
@@ -146,46 +141,46 @@ class BatchFilters(BaseModel):
     GET /api/v1/batches
     """
 
-    is_closed: Optional[bool] = Field(None, description="Статус закрытия смены")
+    is_closed: bool | None = Field(None, description="Статус закрытия смены")
 
-    work_center_id: Optional[int] = Field(None, ge=1, description="ID рабочего центра")
+    work_center_id: int | None = Field(None, ge=1, description="ID рабочего центра")
 
-    shift: Optional[str] = Field(
+    shift: str | None = Field(
         None, min_length=1, max_length=50, description="Номер смены"
     )
 
-    batch_number: Optional[int] = Field(None, ge=1, description="Номер партии")
+    batch_number: int | None = Field(None, ge=1, description="Номер партии")
 
-    batch_date: Optional[date] = Field(None, description="Дата партии")
+    batch_date: date | None = Field(None, description="Дата партии")
 
-    work_center_identifier: Optional[str] = Field(
+    work_center_identifier: str | None = Field(
         None,
         min_length=1,
         max_length=50,
         description="Идентификатор рабочего центра (RC-001)",
     )
 
-    team: Optional[str] = Field(
+    team: str | None = Field(
         None,
         min_length=1,
         max_length=100,
         description="Название бригады (частичное совпадение)",
     )
 
-    nomenclature: Optional[str] = Field(
+    nomenclature: str | None = Field(
         None,
         min_length=1,
         max_length=200,
         description="Наименование продукции (частичное совпадение)",
     )
 
-    ekn_code: Optional[str] = Field(
+    ekn_code: str | None = Field(
         None, min_length=1, max_length=50, description="Код ЕКН (частичное совпадение)"
     )
 
-    date_from: Optional[date] = Field(None, description="Дата партии (от)")
+    date_from: date | None = Field(None, description="Дата партии (от)")
 
-    date_to: Optional[date] = Field(None, description="Дата партии (до)")
+    date_to: date | None = Field(None, description="Дата партии (до)")
 
     model_config = ConfigDict(str_strip_whitespace=True, extra="forbid")
 
@@ -195,7 +190,7 @@ class BatchFilters(BaseModel):
 
     @field_validator("batch_date")
     @classmethod
-    def validate_batch_date(cls, v: Optional[date]) -> Optional[date]:
+    def validate_batch_date(cls, v: date | None) -> date | None:
         """Проверяет, что дата партии не в будущем"""
         if v is not None and v > date.today():
             raise ValueError("batch_date cannot be in the future")
@@ -203,7 +198,7 @@ class BatchFilters(BaseModel):
 
     @field_validator("date_from", "date_to")
     @classmethod
-    def validate_date_range(cls, v: Optional[date], info) -> Optional[date]:
+    def validate_date_range(cls, v: date | None, info) -> date | None:
         """Проверяет, что date_from <= date_to"""
         if v is None:
             return v
@@ -224,7 +219,7 @@ class BatchFilters(BaseModel):
         "team", "nomenclature", "ekn_code", "work_center_identifier", "shift"
     )
     @classmethod
-    def validate_string_fields(cls, v: Optional[str]) -> Optional[str]:
+    def validate_string_fields(cls, v: str | None) -> str | None:
         """Проверяет, что строковые поля не пустые и не состоят только из пробелов."""
         if v is not None and not v.strip():
             raise ValueError("Field cannot be empty or contain only spaces")

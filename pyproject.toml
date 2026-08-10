@@ -49,3 +49,18 @@ pre-commit = "^3.5.0"
 [build-system]
 requires = ["poetry-core>=2.0.0,<3.0.0"]
 build-backend = "poetry.core.masonry.api"
+
+[tool.ruff.lint]
+ignore = [
+    "B008",
+    "BLE001",
+    "F401",
+    "DTZ011",
+    "SIM102",
+    "F821",
+    "S110",
+    "DTZ005",
+    "F841",
+    "ASYNC230",
+    "RUF013",
+]

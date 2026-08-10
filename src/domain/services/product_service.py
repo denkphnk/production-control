@@ -1,5 +1,3 @@
-from typing import List, Optional
-
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.data.models.product import Product
@@ -19,7 +17,7 @@ class ProductService:
     ##########################################
     # ДОБАВЛЕНИЕ ПРОДУКЦИИ С ПРОВЕРКАМИ
     ##########################################
-    async def create(self, data: ProductCreate) -> Optional[Product]:
+    async def create(self, data: ProductCreate) -> Product | None:
         batch = await self.batch_repo.get_by_id(data.batch_id)
 
         if batch is None:
@@ -37,7 +35,6 @@ class ProductService:
         if batch.is_closed:
             raise ValueError(f"Batch with ID {data.batch_id} is closed")
 
-
         try:
             product_data = data.model_dump()
             product = await self.product_repo.create(product_data)
@@ -53,7 +50,7 @@ class ProductService:
     ##########################################
     async def get_by_unique_code(
         self, unique_code: str, batch_id: int
-    ) -> Optional[Product]:
+    ) -> Product | None:
         """Ищет продукцию по уникальному коду"""
         return await self.product_repo.get_by_unique_code(unique_code, batch_id)
 
@@ -62,13 +59,13 @@ class ProductService:
     ##########################################
     async def get_by_batch_id(
         self, batch_id: int, offset: int = 0, limit: int = 20
-    ) -> List[Product]:
+    ) -> list[Product]:
         """Ищет продукцию по ID партии"""
         return await self.product_repo.get_by_batch_id(batch_id, offset, limit)
 
     async def get_aggregated_by_batch_id(
         self, batch_id: int, offset: int = 0, limit: int = 20
-    ) -> List[Product]:
+    ) -> list[Product]:
         """Ищет аггрегированную продукцию по ID партии"""
         return await self.product_repo.get_aggregated_by_batch_id(
             batch_id, offset, limit
@@ -76,7 +73,7 @@ class ProductService:
 
     async def get_not_aggregated_by_batch_id(
         self, batch_id: int, offset: int = 0, limit: int = 20
-    ) -> List[Product]:
+    ) -> list[Product]:
         """Ищет неаггрегированную продукцию по ID партии"""
         return await self.product_repo.get_not_aggregated_by_batch_id(
             batch_id, offset, limit

@@ -1,12 +1,10 @@
 import os
-from typing import Any, Dict, List
 
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, status
 
-from src.api.v1.schemas.report import BatchExportRequest, ReportResponse
-from src.domain.services.report_service import ReportService
 from src.api.v1.dependencies import get_batch_service, get_report_service
 from src.api.v1.schemas.batch import (
+    AggregateProduct,
     BatchCreate,
     BatchDetailResponse,
     BatchFullResponse,
@@ -15,12 +13,11 @@ from src.api.v1.schemas.batch import (
     BatchStatisticsResponse,
     BatchUpdate,
     PaginatedBatchResponse,
-    AggregateProduct,
     ProductInBatchResponse,
 )
-
+from src.api.v1.schemas.report import BatchExportRequest, ReportResponse
 from src.domain.services.batch_service import BatchService
-from src.celery_app import celery_app
+from src.domain.services.report_service import ReportService
 from src.storage.minio_service import minio_service
 
 batches_router = APIRouter(prefix="/api/v1/batches", tags=["batches"])
@@ -144,7 +141,9 @@ async def aggregate_product(
         product = await service.aggregate_product(batch_id, data.unique_code)
         if product is None:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND)
-        response_product = ProductInBatchResponse.model_validate(product, from_attributes=True)
+        response_product = ProductInBatchResponse.model_validate(
+            product, from_attributes=True
+        )
         return response_product
     except ValueError as e:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
@@ -163,7 +162,10 @@ async def update_batch(
     try:
         batch = await service.update(batch_id, data)
         if batch is None:
-            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Batch with ID {batch_id} not found")
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"Batch with ID {batch_id} not found",
+            )
         response_batch = BatchFullResponse.model_validate(batch)
         return response_batch
     except ValueError as e:
@@ -171,62 +173,61 @@ async def update_batch(
 
 
 @batches_router.post(
-    '/{batch_id}/report',
-    response_model=ReportResponse,
-    status_code=201
+    "/{batch_id}/report", response_model=ReportResponse, status_code=201
 )
-async def create_batch_report(batch_id: int, format: str = 'excel', service: ReportService = Depends(get_report_service)):
+async def create_batch_report(
+    batch_id: int,
+    format: str = "excel",
+    service: ReportService = Depends(get_report_service),
+):
     try:
         return await service.create_report(batch_id, format)
 
     except Exception as e:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=str(e)
-        )
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+
 
 @batches_router.get(
-    '/{batch_id}/report',
-    response_model=List[ReportResponse],
+    "/{batch_id}/report",
+    response_model=list[ReportResponse],
 )
-async def get_reports_by_batch(batch_id: int, service: ReportService = Depends(get_report_service)):
+async def get_reports_by_batch(
+    batch_id: int, service: ReportService = Depends(get_report_service)
+):
     try:
         return await service.get_reports_by_batch(batch_id)
-    
+
     except Exception as e:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail=str(e)
-            )
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
 
-@batches_router.post('/export')
-async def export_batches(data: BatchExportRequest, service: BatchService = Depends(get_batch_service)):
+
+@batches_router.post("/export")
+async def export_batches(
+    data: BatchExportRequest, service: BatchService = Depends(get_batch_service)
+):
     return await service.export_batches(
-        filters=data.filters.model_dump(exclude_none=True),
-        format=data.format
-        )
+        filters=data.filters.model_dump(exclude_none=True), format=data.format
+    )
 
-@batches_router.post('/import')
-async def import_batches(file: UploadFile, service: BatchService = Depends(get_batch_service)):
-    ALLOWED_EXTENSIONS = ['xls', 'xlsx', 'csv']
+
+@batches_router.post("/import")
+async def import_batches(
+    file: UploadFile, service: BatchService = Depends(get_batch_service)
+):
+    ALLOWED_EXTENSIONS = ["xls", "xlsx", "csv"]
     ext = os.path.splitext(file.filename)[1].lower()[1:]
     if ext not in ALLOWED_EXTENSIONS:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"File type not allowed. Use: {', '.join(ALLOWED_EXTENSIONS)}"
+            detail=f"File type not allowed. Use: {', '.join(ALLOWED_EXTENSIONS)}",
         )
-    
+
     try:
-        data = await minio_service.put_file(
-            bucket='imports',
-            file=file
-        )
+        data = await minio_service.put_file(bucket="imports", file=file)
         return await service.import_batches(data)
 
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to upload file: {str(e)}"
+            detail=f"Failed to upload file: {e!s}",
         )
-
-

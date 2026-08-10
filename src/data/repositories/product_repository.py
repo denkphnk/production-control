@@ -1,8 +1,8 @@
-from typing import Optional, List, Dict, Any
-from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, update
-
 from datetime import datetime, timezone
+from typing import Any
+
+from sqlalchemy import select, update
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.data.models.product import Product
 from src.data.repositories.base_repository import BaseRepository
@@ -19,7 +19,7 @@ class ProductRepository(BaseRepository[Product]):
     ##########################################
     async def get_by_unique_code(
         self, unique_code: str, batch_id: int
-    ) -> Optional[Product]:
+    ) -> Product | None:
         """Ищет продукцию по уникальному коду"""
         query = select(self.model).where(
             self.model.unique_code == unique_code, self.model.batch_id == batch_id
@@ -33,7 +33,7 @@ class ProductRepository(BaseRepository[Product]):
     ##########################################
     async def get_by_batch_id(
         self, batch_id: int, offset: int = 0, limit: int = 20
-    ) -> List[Product]:
+    ) -> list[Product]:
         """Ищет продукцию по ID партии"""
         query = (
             select(self.model)
@@ -47,7 +47,7 @@ class ProductRepository(BaseRepository[Product]):
 
     async def get_aggregated_by_batch_id(
         self, batch_id: int, offset: int = 0, limit: int = 20
-    ) -> List[Product]:
+    ) -> list[Product]:
         """Ищет аггрегированную продукцию по ID партии"""
         query = (
             select(self.model)
@@ -61,7 +61,7 @@ class ProductRepository(BaseRepository[Product]):
 
     async def get_not_aggregated_by_batch_id(
         self, batch_id: int, offset: int = 0, limit: int = 20
-    ) -> List[Product]:
+    ) -> list[Product]:
         """Ищет неаггрегированную продукцию по ID партии"""
         query = (
             select(self.model)
@@ -78,7 +78,7 @@ class ProductRepository(BaseRepository[Product]):
     ##########################################
     async def _aggregate_single_product(
         self, unique_code: str, batch_id: int
-    ) -> Optional[Product]:
+    ) -> Product | None:
         """
         Внутренняя функция для аггрегации одного продукта
         Используется в aggregate_product и aggregate_products
@@ -101,13 +101,13 @@ class ProductRepository(BaseRepository[Product]):
 
     async def aggregate_product(
         self, unique_code: str, batch_id: int
-    ) -> Optional[Product]:
+    ) -> Product | None:
         """Аггрегирует один продукт"""
         return await self._aggregate_single_product(unique_code, batch_id)
 
     async def aggregate_products(
-        self, unique_codes: List[str], batch_id: int
-    ) -> Dict[str, Any]:
+        self, unique_codes: list[str], batch_id: int
+    ) -> dict[str, Any]:
         """Аггрегирует несколько продуктов"""
         result = {
             "total": len(unique_codes),

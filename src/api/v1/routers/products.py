@@ -1,13 +1,13 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 
+from src.api.v1.dependencies import get_product_service
 from src.api.v1.schemas.product import (
+    PaginatedProductResponse,
     PaginationParams,
-    ProductListItemResponse,
     ProductCreate,
-    PaginatedProductResponse
+    ProductListItemResponse,
 )
 from src.domain.services.product_service import ProductService
-from src.api.v1.dependencies import get_product_service
 
 products_router = APIRouter(prefix="/api/v1/products", tags=["products"])
 
@@ -32,7 +32,9 @@ async def product_get(
         )
         total = await service.count_by_batch_id(batch_id)
 
-        response_items = [ProductListItemResponse.model_validate(item) for item in items]
+        response_items = [
+            ProductListItemResponse.model_validate(item) for item in items
+        ]
 
         return PaginatedProductResponse.create(
             items=response_items,

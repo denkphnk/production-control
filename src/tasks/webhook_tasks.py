@@ -1,9 +1,9 @@
 from datetime import datetime, timedelta, timezone
 
+from src.celery_app import celery_app
+from src.core.database import AsyncSessionLocal
 from src.data.repositories.report_repository import ReportRepository
 from src.domain.services.webhook_service import WebhookService
-from src.core.database import AsyncSessionLocal
-from src.celery_app import celery_app
 from src.storage.minio_service import minio_service
 
 
@@ -13,24 +13,16 @@ async def send_webhook_delivery(self, delivery_id: int):
         async with AsyncSessionLocal() as session:
             service = WebhookService(session)
 
-            delivery = await service.webhook_repo.get_delivery_by_id(
-                delivery_id
-            )
+            delivery = await service.webhook_repo.get_delivery_by_id(delivery_id)
 
             subscription = delivery.subscription
 
-            await service._send_to_subscriber(
-                delivery,
-                subscription,
-                delivery.payload
-            )
+            await service._send_to_subscriber(delivery, subscription, delivery.payload)
     except Exception as exc:
-        countdown = 30 * (2 ** self.request.retries)
+        countdown = 30 * (2**self.request.retries)
 
-        raise self.retry(
-            exc=exc,
-            countdown=countdown
-        )
+        raise self.retry(exc=exc, countdown=countdown)
+
 
 @celery_app.task(bind=True, max_retries=3)
 async def cleanup_old_files(self):
@@ -45,8 +37,7 @@ async def cleanup_old_files(self):
             for report in reports:
                 try:
                     minio_service.delete_file(
-                        bucket="reports",
-                        object_name=report.file_name
+                        bucket="reports", object_name=report.file_name
                     )
                 except Exception:
                     pass
@@ -56,10 +47,8 @@ async def cleanup_old_files(self):
             await session.commit()
 
     except Exception as exc:
-        raise self.retry(
-            exc=exc,
-            countdown=60 * (2 ** self.request.retries)
-        )
+        raise self.retry(exc=exc, countdown=60 * (2**self.request.retries))
+
 
 @celery_app.task(bind=True, max_retries=3)
 async def retry_failed_webhooks(self):

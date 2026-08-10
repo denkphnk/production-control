@@ -1,22 +1,23 @@
-from typing import Any, Dict
 from datetime import datetime, timedelta, timezone
+from typing import Any
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.data.repositories.analytics_repository import AnalyticsRepository
-from src.data.repositories.product_repository import ProductRepository
 from src.data.repositories.batch_repository import BatchRepository
+from src.data.repositories.product_repository import ProductRepository
 
 
 class AnalyticsService:
     """Сервис для аналитики"""
+
     def __init__(self, session: AsyncSession):
         self.session = session
         self.batch_repo = BatchRepository(session)
         self.product_repo = ProductRepository(session)
         self.analytics_repo = AnalyticsRepository(session)
 
-    async def get_dashboard_statistics(self) -> Dict[str, Any]:
+    async def get_dashboard_statistics(self) -> dict[str, Any]:
 
         # SUMMARY
         total_batches = await self.batch_repo.count()
@@ -41,28 +42,25 @@ class AnalyticsService:
 
         # TODAY
         today_start = datetime.now(timezone.utc).replace(
-            hour=0,
-            minute=0,
-            second=0,
-            microsecond=0
+            hour=0, minute=0, second=0, microsecond=0
         )
         tomorrow = today_start + timedelta(days=1)
 
         batches_created_today = await self.batch_repo.count_with_cond(
             self.batch_repo.model.created_at >= today_start,
-            self.batch_repo.model.created_at < tomorrow
+            self.batch_repo.model.created_at < tomorrow,
         )
         batches_closed_today = await self.batch_repo.count_with_cond(
             self.batch_repo.model.closed_at >= today_start,
-            self.batch_repo.model.closed_at < tomorrow
+            self.batch_repo.model.closed_at < tomorrow,
         )
         products_added_today = await self.product_repo.count_with_cond(
             self.product_repo.model.created_at >= today_start,
-            self.product_repo.model.created_at < tomorrow
+            self.product_repo.model.created_at < tomorrow,
         )
         products_aggregated_today = await self.product_repo.count_with_cond(
             self.product_repo.model.aggregated_at >= today_start,
-            self.product_repo.model.aggregated_at < tomorrow
+            self.product_repo.model.aggregated_at < tomorrow,
         )
 
         today = {
@@ -89,7 +87,11 @@ class AnalyticsService:
 
         for row in rows:
             aggregated_count = row.aggregated_count or 0
-            rate = round(aggregated_count / row.products_count * 100, 2) if row.products_count else 0
+            rate = (
+                round(aggregated_count / row.products_count * 100, 2)
+                if row.products_count
+                else 0
+            )
 
             top_wc.append(
                 {

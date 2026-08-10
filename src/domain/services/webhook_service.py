@@ -1,17 +1,16 @@
 import hashlib
 import hmac
 import json
-from fastapi.encoders import jsonable_encoder
-import httpx
-
-from typing import Any, Dict, List, Optional, Tuple
 from datetime import datetime, timezone
+from typing import Any
 
+import httpx
+from fastapi.encoders import jsonable_encoder
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from src.domain.schemas.webhook import WebhookCreate, WebhookUpdate
 from src.data.models.webhook import WebhookDelivery, WebhookSubscription
 from src.data.repositories.webhook_repository import WebhookRepository
+from src.domain.schemas.webhook import WebhookCreate, WebhookUpdate
 
 
 class WebhookService:
@@ -25,14 +24,13 @@ class WebhookService:
     async def get_by_id(self, subscription_id: int) -> WebhookSubscription:
         return await self.webhook_repo.get_by_id(subscription_id)
 
-
     ##########################################
     # СОЗДАНИЕ ПОДПИСКИ
     ##########################################
     async def create(self, data: WebhookCreate) -> WebhookSubscription:
         """Создает подписку"""
         data = data.model_dump()
-        data["url"] = str(data['url'])
+        data["url"] = str(data["url"])
 
         existing = await self.webhook_repo.get_by_url(data["url"])
         if existing:
@@ -49,7 +47,9 @@ class WebhookService:
     ##########################################
     # ПОЛУЧЕНИЕ ВСЕХ ПОДПИСОК
     ##########################################
-    async def get_all(self, offset: int = 0, limit: int = 20) -> Tuple[List[WebhookSubscription], int]:
+    async def get_all(
+        self, offset: int = 0, limit: int = 20
+    ) -> tuple[list[WebhookSubscription], int]:
         """Возвращает список всех подписок."""
         return await self.webhook_repo.get_all_with_count(offset, limit)
 
@@ -59,7 +59,9 @@ class WebhookService:
     ##########################################
     # ОБНОВЛЕНИЕ ПОДПИСКИ
     ##########################################
-    async def update(self, subscription_id: int, data: WebhookUpdate) -> Optional[WebhookSubscription]:
+    async def update(
+        self, subscription_id: int, data: WebhookUpdate
+    ) -> WebhookSubscription | None:
         """Обновляет подписку."""
         existing = await self.webhook_repo.get_by_id(subscription_id)
         if not existing:
@@ -70,7 +72,9 @@ class WebhookService:
         if "url" in update_data:
             url_exists = await self.webhook_repo.get_by_url(update_data["url"])
             if url_exists and url_exists.id != subscription_id:
-                raise ValueError(f"Webhook with URL {update_data['url']} already exists")
+                raise ValueError(
+                    f"Webhook with URL {update_data['url']} already exists"
+                )
 
         try:
             subscription = await self.webhook_repo.update(subscription_id, update_data)
@@ -94,22 +98,18 @@ class WebhookService:
     # ИСТОРИЯ ДОСТАВОК
     ##########################################
     async def get_deliveries(
-        self,
-        subscription_id: int,
-        offset: int = 0,
-        limit: int = 20
-    ) -> Tuple[List[WebhookDelivery], int]:
+        self, subscription_id: int, offset: int = 0, limit: int = 20
+    ) -> tuple[list[WebhookDelivery], int]:
         """Возвращает историю доставок для подписки."""
         return await self.webhook_repo.get_deliveries_for_subscription(
             subscription_id, offset, limit
         )
 
     async def send_event(
-        self, event_type: str, payload: Dict[str, Any], async_mode: bool
+        self, event_type: str, payload: dict[str, Any], async_mode: bool
     ) -> None:
         """Отправляет событие всем подписчикам"""
         from src.tasks.webhook_tasks import send_webhook_delivery
-
 
         subscriptions = await self.webhook_repo.get_active_subscriptions_for_event(
             event_type
@@ -141,7 +141,10 @@ class WebhookService:
                 await self._send_to_subscriber(delivery, subscription, webhook_payload)
 
     async def _send_to_subscriber(
-        self, delivery: WebhookDelivery, subscription: WebhookSubscription, payload: Dict[str, Any]
+        self,
+        delivery: WebhookDelivery,
+        subscription: WebhookSubscription,
+        payload: dict[str, Any],
     ) -> None:
         """Отправляет событие подписчику"""
         try:
@@ -176,8 +179,7 @@ class WebhookService:
                 error_message=f"Timeout after {subscription.timeout}s",
             )
 
-
-    def _create_signature(self, payload: Dict[str, Any], secret_key: str) -> str:
+    def _create_signature(self, payload: dict[str, Any], secret_key: str) -> str:
         """Создает HMAC-SHA256 подпись для вебхука"""
         payload_str = json.dumps(payload, sort_keys=True)
 
@@ -191,9 +193,9 @@ class WebhookService:
         self,
         delivery_id: int,
         status: str,
-        response_status: Optional[int] = None,
-        response_body: Optional[str] = None,
-        error_message: Optional[str] = None,
+        response_status: int | None = None,
+        response_body: str | None = None,
+        error_message: str | None = None,
     ) -> None:
         """Сохраняет результат доставки в БД"""
         delivery = await self.webhook_repo.get_delivery_by_id(delivery_id)
