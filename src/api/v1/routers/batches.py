@@ -1,6 +1,7 @@
+import os
 from typing import Any, Dict, List
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, UploadFile, status
 
 from src.api.v1.schemas.report import BatchExportRequest, ReportResponse
 from src.domain.services.report_service import ReportService
@@ -20,6 +21,7 @@ from src.api.v1.schemas.batch import (
 
 from src.domain.services.batch_service import BatchService
 from src.celery_app import celery_app
+from src.storage.minio_service import minio_service
 
 batches_router = APIRouter(prefix="/api/v1/batches", tags=["batches"])
 
@@ -204,6 +206,27 @@ async def export_batches(data: BatchExportRequest, service: BatchService = Depen
         format=data.format
         )
 
-@batches_router.get('/import')
-async def import_batches(file_path: str, service: BatchService = Depends(get_batch_service)):
-    return await service.import_batches(file_path)
+@batches_router.post('/import')
+async def import_batches(file: UploadFile, service: BatchService = Depends(get_batch_service)):
+    ALLOWED_EXTENSIONS = ['xls', 'xlsx', 'csv']
+    ext = os.path.splitext(file.filename)[1].lower()[1:]
+    if ext not in ALLOWED_EXTENSIONS:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"File type not allowed. Use: {', '.join(ALLOWED_EXTENSIONS)}"
+        )
+    
+    try:
+        data = await minio_service.put_file(
+            bucket='imports',
+            file=file
+        )
+        return await service.import_batches(data)
+
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to upload file: {str(e)}"
+        )
+
+

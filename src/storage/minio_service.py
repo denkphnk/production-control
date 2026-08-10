@@ -1,5 +1,9 @@
+import io
 import os
+from typing import Optional
+import uuid
 
+from fastapi import UploadFile
 from minio import Minio
 from datetime import timedelta
 
@@ -14,9 +18,42 @@ class MinioService:
             secure=False,
         )
 
+    async def put_file(
+            self, 
+            bucket: str,
+            file: UploadFile,
+            object_name: Optional[str] = None,
+            expires_days: int = 7
+    ):
+        if object_name is None:
+            ext = os.path.splitext(file.filename)[1]
+            object_name = f"{uuid.uuid4()}{ext}"
+
+        contents = await file.read()
+
+        self.client.put_object(
+            bucket_name=bucket,
+            object_name=object_name,
+            data=io.BytesIO(contents),
+            length=len(contents),
+            content_type=file.content_type
+        )
+
+        url = self.client.presigned_get_object(
+            bucket_name=bucket,
+            object_name=object_name,
+            expires=timedelta(days=expires_days)
+        )
+
+        return {
+            "url": url,
+            "object_name": object_name
+        }
+
     def upload_file(
         self,
         bucket: str,
+        file,
         file_path: str,
         object_name: str | None = None,
         expires_days: int = 7
@@ -77,6 +114,16 @@ class MinioService:
             prefix=prefix,
             recursive=True
         ))
+
+    def get_file(self, bucket: str, object_name: str) -> bytes:
+        try:
+            response = self.client.get_object(bucket, object_name)
+            data = response.read()
+            response.close()
+            response.release_conn()
+            return data
+        except Exception as e:
+            raise ValueError(f"Failed to get file from MinIO: {str(e)}")
     
     def _get_content_type(self, file_path: str) -> str:
         """Определить Content-Type."""

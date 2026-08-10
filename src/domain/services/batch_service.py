@@ -1,4 +1,5 @@
 from datetime import datetime, timezone
+import os
 from typing import Any, Dict, List, Optional, Tuple
 
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -39,12 +40,12 @@ class BatchService:
     ##########################################
     # СОЗДАНИЕ
     ##########################################
-    async def create(self, data: BatchCreate) -> Batch:
+    async def create(self, data: BatchCreate, send_webhook: bool = True ) -> Batch:
         """Создает партию"""
         is_unique = await self.batch_repo.is_batch_number_unique(
             batch_number=data.batch_number, 
             batch_date=data.batch_date,
-            exclude_id=None
+            exclude_id=None,
         )
         if not is_unique:
             raise ValueError(
@@ -62,18 +63,18 @@ class BatchService:
             await self.session.refresh(batch)
 
             batch_with_relations = await self.batch_repo.get_by_id_with_relations(batch.id)
-
-            await self.webhook_service.send_event(
-                "batch_created",
-                {
-                    "id": batch.id,
-                    "batch_number": batch.batch_number,
-                    "batch_date": batch.batch_date.isoformat(),
-                    "nomenclature": batch.nomenclature,
-                    "work_center": wc.name if wc else None,
-                },
-                async_mode=False
-            )
+            if send_webhook:
+                await self.webhook_service.send_event(
+                    "batch_created",
+                    {
+                        "id": batch.id,
+                        "batch_number": batch.batch_number,
+                        "batch_date": batch.batch_date.isoformat(),
+                        "nomenclature": batch.nomenclature,
+                        "work_center": wc.name if wc else None,
+                    },
+                    async_mode=False
+                )
             return batch_with_relations
 
         except Exception:
@@ -258,11 +259,16 @@ class BatchService:
             "task_id": task.id
         }
 
-    async def import_batch(self, file_path: str):
+    async def import_batches(self, data: Dict[str, Any]):
         from src.tasks.batch_tasks import import_batches_from_file
 
-        task = import_batches_from_file.delay(file_path)
+        
+        task = import_batches_from_file.delay(
+            file_url=data["url"],
+            object_name=data["object_name"]
+        )
 
         return {
-            "task_id": task.id
+            "task_id": task.id,
+            'status': 'PENDING'
         }

@@ -1,5 +1,7 @@
+import io
 import json
 import os
+import pandas as pd
 
 from typing import List
 from datetime import datetime, timezone
@@ -7,6 +9,8 @@ from openpyxl import Workbook
 from openpyxl.styles import Font
 from openpyxl.utils import get_column_letter
 
+from src.domain.services.webhook_service import WebhookService
+from src.domain.services.import_service import ImportService
 from src.api.v1.schemas.batch import BatchListRequest
 from src.domain.services.analytics_service import AnalyticsService
 from src.domain.services.product_service import ProductService
@@ -96,10 +100,10 @@ async def aggregate_products_batch(self, batch_id: int, codes: List[str]):
 
 # TODO: import_batches_from_file
 @celery_app.task(bind=True, max_retries=1)
-def import_batches_from_file(
+async def import_batches_from_file(
     self,
     file_url: str,
-    user_id: int
+    object_name: str
 ):
     """
     Импорт партий из Excel/CSV файла.
@@ -111,7 +115,6 @@ def import_batches_from_file(
     
     Args:
         file_url: URL файла в MinIO
-        user_id: ID пользователя для отправки результата
     
     Returns:
         {
@@ -125,7 +128,62 @@ def import_batches_from_file(
             ]
         }
     """
-    pass
+
+    self.update_state(state="PROGRESS")
+
+    try:
+        file_content = minio_service.get_file(
+            bucket='imports',
+            object_name=object_name,
+        )
+
+        ext = object_name.split('.')[-1].lower()
+
+        if ext == 'csv':
+            df = pd.read_csv(io.BytesIO(file_content), delimiter=';')
+        else:
+            df = pd.read_excel(io.BytesIO(file_content), engine='openpyxl')
+
+        total_rows = len(df)
+
+        required_columns = [
+            "batch_number", "batch_date", "nomenclature", 
+            "ekn_code", "shift", "team", "task_description",
+            "work_center_id", "shift_start", "shift_end"
+        ]
+        
+        missing_columns = [col for col in required_columns if col not in df.columns]
+        if missing_columns:
+            raise ValueError(f"Missing columns: {', '.join(missing_columns)}")
+
+        async with AsyncSessionLocal() as session:
+            import_service = ImportService(session)
+            webhook_service = WebhookService(session)
+            result = await import_service.import_from_dataframe(df)
+
+            await webhook_service.send_event(
+                "import_completed",
+                {
+                    "total_rows": total_rows,
+                    "created": result["created"],
+                    "skipped": result["skipped"],
+                    "errors": result["errors"][:20]
+                },
+                async_mode=False
+            )
+
+            return {
+                "success": True,
+                "total_rows": total_rows,
+                "created": result["created"],
+                "skipped": result["skipped"],
+                "errors": result["errors"][:20]
+            }
+
+    except Exception as e:
+        self.update_state(state="FAILURE")
+        raise
+
 
 @celery_app.task
 async def export_batches_to_file(

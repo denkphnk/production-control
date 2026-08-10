@@ -20,6 +20,9 @@ class WorkCenterService:
         """Ищет РЦ по строковому идентификатору (RC-001)"""
         return await self.wc_repo.get_by_identifier(identifier)
 
+    async def get_by_id(self, id: int) -> Optional[WorkCenter]:
+        return await self.wc_repo.get_by_id(id)
+
     ##########################################
     # ПОИСК ПО NAME
     ##########################################
