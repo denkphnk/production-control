@@ -81,6 +81,10 @@ jobs:
           echo "REDIS_URL=redis://localhost:6379/0" >> .env
           echo "CELERY_BROKER_URL=amqp://admin:admin@localhost:5672//" >> .env
           echo "CELERY_RESULT_BACKEND=redis://localhost:6379/1" >> .env
+          echo "MINIO_ENDPOINT=localhost:9000" >> .env
+          echo "MINIO_ACCESS_KEY=minioadmin" >> .env
+          echo "MINIO_SECRET_KEY=minioadmin" >> .env
+          echo "MINIO_SECURE=false" >> .env
           echo "ENVIRONMENT=testing" >> .env
 
       - name: Run Ruff (linter)
