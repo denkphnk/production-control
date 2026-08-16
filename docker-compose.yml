@@ -25,6 +25,7 @@ services:
       - MINIO_SECURE=false
     volumes:
       - ./src:/app/src
+      - ./migrations:/app/migrations
     command: uvicorn src.main:app --host 0.0.0.0 --port 8000 --reload
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
@@ -105,6 +106,7 @@ services:
       - MINIO_SECRET_KEY=minioadmin
     volumes:
       - ./src:/app/src
+      - ./migrations:/app/migrations
     command: celery -A src.celery_app worker --pool=custom --loglevel=info --concurrency=10
 
   # Celery Beat (Scheduler)
