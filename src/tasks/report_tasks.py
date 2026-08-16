@@ -6,6 +6,7 @@ from src.core.database import AsyncSessionLocal
 from src.domain.services.batch_service import BatchService
 from src.domain.services.product_service import ProductService
 from src.domain.services.report_service import ReportService
+from src.data.repositories.report_repository import ReportRepository
 from src.domain.services.webhook_service import WebhookService
 from src.storage.minio_service import minio_service
 
@@ -254,3 +255,30 @@ async def generate_batch_report(
         finally:
             if file_name and os.path.exists(file_name):
                 os.remove(file_name)
+
+
+
+@celery_app.task(bind=True, max_retries=3)
+async def cleanup_old_files(self):
+    try:
+        async with AsyncSessionLocal() as session:
+            report_repo = ReportRepository(session)
+
+            cutoff_date = datetime.now(timezone.utc) - timedelta(days=30)
+
+            reports = await report_repo.get_older_than(cutoff_date)
+
+            for report in reports:
+                try:
+                    minio_service.delete_file(
+                        bucket="reports", object_name=report.file_name
+                    )
+                except Exception:
+                    pass
+
+                await report_repo.delete(report.id)
+
+            await session.commit()
+
+    except Exception as exc:
+        raise self.retry(exc=exc, countdown=60 * (2**self.request.retries))
