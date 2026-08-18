@@ -86,6 +86,134 @@ class BatchCreate(BatchBase):
 
     is_closed: bool = Field(default=False, description="Статус закрытия смены")
 
+class BatchCreateIntegration(BaseModel):
+    is_closed: bool = Field(
+        default=False,
+        validation_alias="СтатусЗакрытия",
+        description="Статус закрытия партии",
+    )
+
+    task_description: str = Field(
+        ...,
+        min_length=1,
+        max_length=1000,
+        validation_alias="ПредставлениеЗаданияНаСмену",
+        description="Описание задания на смену",
+    )
+
+    work_center_name: str = Field(
+        ...,
+        min_length=1,
+        max_length=200,
+        validation_alias="РабочийЦентр",
+        description="Название рабочего центра",
+    )
+
+    shift: str = Field(
+        ...,
+        min_length=1,
+        max_length=50,
+        validation_alias="Смена",
+        description="Смена",
+    )
+
+    team: str = Field(
+        ...,
+        min_length=1,
+        max_length=50,
+        validation_alias="Бригада",
+        description="Бригада",
+    )
+
+    batch_number: int = Field(
+        ...,
+        ge=1,
+        validation_alias="НомерПартии",
+        description="Номер партии",
+    )
+
+    batch_date: date = Field(
+        ...,
+        validation_alias="ДатаПартии",
+        description="Дата партии",
+    )
+
+    nomenclature: str = Field(
+        ...,
+        min_length=1,
+        max_length=200,
+        validation_alias="Номенклатура",
+        description="Номенклатура",
+    )
+
+    ekn_code: str = Field(
+        ...,
+        min_length=1,
+        max_length=50,
+        validation_alias="КодЕКН",
+        description="Код ЕКН",
+    )
+
+    work_center_identifier: str = Field(
+        ...,
+        min_length=1,
+        max_length=100,
+        validation_alias="ИдентификаторРЦ",
+        description="Внешний идентификатор рабочего центра",
+    )
+
+    shift_start: datetime = Field(
+        ...,
+        validation_alias="ДатаВремяНачалаСмены",
+        description="Дата и время начала смены",
+    )
+
+    shift_end: datetime = Field(
+        ...,
+        validation_alias="ДатаВремяОкончанияСмены",
+        description="Дата и время окончания смены",
+    )
+
+    model_config = ConfigDict(
+        str_strip_whitespace=True,
+        populate_by_name=True,
+        extra="forbid",
+    )
+
+    @field_validator("shift_end")
+    @classmethod
+    def validate_shift_end(
+        cls,
+        value: datetime,
+        info: ValidationInfo,
+    ) -> datetime:
+        start = info.data.get("shift_start")
+
+        if start is not None and start >= value:
+            raise ValueError("shift_end should be after shift_start")
+
+        return value
+
+    @field_validator("batch_date")
+    @classmethod
+    def validate_batch_date(cls, value: date) -> date:
+        if value > date.today():
+            raise ValueError("batch_date cannot be in the future")
+
+        return value
+
+    @field_validator("ekn_code")
+    @classmethod
+    def validate_ekn_code(cls, value: str) -> str:
+        import re
+        value = value.upper()
+
+        if not re.fullmatch(r"^[A-Z]{3}-\d{5}$", value):
+            raise ValueError(
+                'EKN code must be like "ABC-12345"'
+            )
+        return value
+
 
 ##########################################
 # ОБНОВЛЕНИЕ ПАРТИИ

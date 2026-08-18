@@ -1,4 +1,5 @@
 import os
+from typing import List
 
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, status
 
@@ -6,6 +7,7 @@ from src.api.v1.dependencies import get_batch_service, get_report_service
 from src.api.v1.schemas.batch import (
     AggregateProduct,
     BatchCreate,
+    BatchCreateIntegration,
     BatchDetailResponse,
     BatchFullResponse,
     BatchListItemResponse,
@@ -87,16 +89,23 @@ async def get_statistics(
 # СОЗДАНИЕ ПАРТИИ
 ##########################################
 @batches_router.post(
-    "/", response_model=BatchDetailResponse, status_code=status.HTTP_201_CREATED
+    "/", response_model=List[BatchDetailResponse], status_code=status.HTTP_201_CREATED
 )
 async def create_batch(
-    data: BatchCreate, service: BatchService = Depends(get_batch_service)
+    data: List[BatchCreateIntegration], service: BatchService = Depends(get_batch_service)
 ):
     """Создание новой партии"""
     try:
-        batch = await service.create(data)
-        response_batch = BatchDetailResponse.model_validate(batch)
-        return response_batch
+        batches = []
+
+        for item in data:
+            batch = await service.create_from_integration(item)
+            batches.append(batch)
+
+        return [
+            BatchDetailResponse.model_validate(batch)
+            for batch in batches
+        ]
     except ValueError as e:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
 

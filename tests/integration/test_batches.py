@@ -13,26 +13,31 @@ class TestBatches:
         """Тест создания партии"""
         response = await client.post(
             "/api/v1/batches/",
-            json={
-                "task_description": "Изготовить 500 гаек М8",
-                "work_center_id": create_workcenter.id,
-                "shift": "2 смена",
-                "team": "Бригада Петрова",
-                "batch_number": 22223,
-                "batch_date": "2024-01-30",
-                "nomenclature": "Гайка М8",
-                "ekn_code": "EKN-12346",
-                "shift_start": "2024-01-30T20:00:00",
-                "shift_end": "2024-01-31T08:00:00",
-                "is_closed": False,
-            },
+            json=[
+                {
+                    "СтатусЗакрытия": False,
+                    "ПредставлениеЗаданияНаСмену": "Изготовить 500 гаек М8",
+                    "РабочийЦентр": create_workcenter.name,
+                    "Смена": "2 смена",
+                    "Бригада": "Бригада Петрова",
+                    "НомерПартии": 22223,
+                    "ДатаПартии": "2024-01-30",
+                    "Номенклатура": "Гайка М8",
+                    "КодЕКН": "ABC-12346",
+                    "ИдентификаторРЦ": create_workcenter.identifier,
+                    "ДатаВремяНачалаСмены": "2024-01-30T20:00:00",
+                    "ДатаВремяОкончанияСмены": "2024-01-31T08:00:00",
+                }
+            ],
         )
 
         assert response.status_code == 201
         data = response.json()
-        assert data["batch_number"] == 22223
-        assert "id" in data
-        assert data["is_closed"] == False
+
+        assert len(data) == 1
+        assert data[0]["batch_number"] == 22223
+        assert "id" in data[0]
+        assert data[0]["is_closed"] is False
 
     @pytest.mark.asyncio
     async def test_create_batch_duplicate(
@@ -41,19 +46,22 @@ class TestBatches:
         """Тест создания партии с дубликатом"""
         response = await client.post(
             "/api/v1/batches/",
-            json={
-                "task_description": "Дубликат",
-                "work_center_id": create_workcenter.id,
-                "shift": "1 смена",
-                "team": "Бригада Иванова",
-                "batch_number": 22222,
-                "batch_date": "2024-01-30",
-                "nomenclature": "Болт М10х50",
-                "ekn_code": "EKN-12345",
-                "shift_start": "2024-01-30T08:00:00",
-                "shift_end": "2024-01-30T20:00:00",
-                "is_closed": False,
-            },
+            json=[
+                {
+                    "ПредставлениеЗаданияНаСмену": "Дубликат",
+                    "РабочийЦентр": create_workcenter.name,
+                    "Смена": "1 смена",
+                    "Бригада": "Бригада Иванова",
+                    "НомерПартии": 22222,
+                    "ДатаПартии": "2024-01-30",
+                    "Номенклатура": "Болт М10х50",
+                    "КодЕКН": "EKN-12345",
+                    "ИдентификаторРЦ": create_workcenter.identifier,
+                    "ДатаВремяНачалаСмены": "2024-01-30T08:00:00",
+                    "ДатаВремяОкончанияСмены": "2024-01-30T20:00:00",
+                    "СтатусЗакрытия": False,
+                }
+            ],
         )
 
         assert response.status_code == 400
@@ -65,20 +73,23 @@ class TestBatches:
     ):
         """Тест создания партии с несуществующим РЦ"""
         response = await client.post(
-            "/api/v1/batches/",
-            json={
-                "task_description": "Изготовить 500 гаек М8",
-                "work_center_id": 12,
-                "shift": "2 смена",
-                "team": "Бригада Петрова",
-                "batch_number": 22223,
-                "batch_date": "2024-01-30",
-                "nomenclature": "Гайка М8",
-                "ekn_code": "EKN-12346",
-                "shift_start": "2024-01-30T20:00:00",
-                "shift_end": "2024-01-31T08:00:00",
-                "is_closed": False,
-            },
+        "/api/v1/batches/",
+        json=[
+                {
+                    "СтатусЗакрытия": False,
+                    "ПредставлениеЗаданияНаСмену": "Изготовить 500 гаек М8",
+                    "РабочийЦентр": 'Цех №2',
+                    "Смена": "2 смена",
+                    "Бригада": "Бригада Петрова",
+                    "НомерПартии": 22223,
+                    "ДатаПартии": "2024-01-30",
+                    "Номенклатура": "Гайка М8",
+                    "КодЕКН": "ABC-12346",
+                    "ИдентификаторРЦ": 'RC-002',
+                    "ДатаВремяНачалаСмены": "2024-01-30T20:00:00",
+                    "ДатаВремяОкончанияСмены": "2024-01-31T08:00:00",
+                }
+            ],
         )
 
         assert response.status_code == 400
@@ -93,23 +104,26 @@ class TestBatches:
     ):
         """Тест создания партии без обязательного поля"""
         response = await client.post(
-            "/api/v1/batches/",
-            json={
-                "task_description": "Изготовить 500 гаек М8",
-                "work_center_id": create_workcenter.id,
-                "team": "Бригада Петрова",
-                "batch_number": 22223,
-                "batch_date": "2024-01-30",
-                "nomenclature": "Гайка М8",
-                "ekn_code": "EKN-12346",
-                "shift_start": "2024-01-30T20:00:00",
-                "shift_end": "2024-01-31T08:00:00",
-                "is_closed": False,
-            },
-        )
+        "/api/v1/batches/",
+        json=[
+            {
+                "СтатусЗакрытия": False,
+                "ПредставлениеЗаданияНаСмену": "Изготовить 500 гаек М8",
+                "РабочийЦентр": create_workcenter.name,
+                "Бригада": "Бригада Петрова",
+                "НомерПартии": 22223,
+                "ДатаПартии": "2024-01-30",
+                "Номенклатура": "Гайка М8",
+                "КодЕКН": "ABC-12346",
+                "ИдентификаторРЦ": create_workcenter.identifier,
+                "ДатаВремяНачалаСмены": "2024-01-30T20:00:00",
+                "ДатаВремяОкончанияСмены": "2024-01-31T08:00:00",
+            }
+        ],
+    )
 
         assert response.status_code == 422
-        assert "shift" in response.json()["detail"][0]["loc"]
+        assert "Смена" in response.json()["detail"][0]["loc"]
 
     @pytest.mark.asyncio
     async def test_create_batch_invalid_format(
@@ -117,24 +131,27 @@ class TestBatches:
     ):
         """Тест создания партии с невалидным форматом"""
         response = await client.post(
-            "/api/v1/batches/",
-            json={
-                "task_description": "Изготовить 500 гаек М8",
-                "work_center_id": create_workcenter.id,
-                "shift": "2 смена",
-                "team": "Бригада Петрова",
-                "batch_number": 22223,
-                "batch_date": "2024-01-30",
-                "nomenclature": "Гайка М8",
-                "ekn_code": "invalid_fromat",
-                "shift_start": "2024-01-30T20:00:00",
-                "shift_end": "2024-01-31T08:00:00",
-                "is_closed": False,
-            },
+                "/api/v1/batches/",
+                json=[
+                {
+                    "СтатусЗакрытия": False,
+                    "ПредставлениеЗаданияНаСмену": "Изготовить 500 гаек М8",
+                    "РабочийЦентр": 'Цех №2',
+                    "Смена": "2 смена",
+                    "Бригада": "Бригада Петрова",
+                    "НомерПартии": 22223,
+                    "ДатаПартии": "2024-01-30",
+                    "Номенклатура": "Гайка М8",
+                    "КодЕКН": "invalid format",
+                    "ИдентификаторРЦ": 'RC-002',
+                    "ДатаВремяНачалаСмены": "2024-01-30T20:00:00",
+                    "ДатаВремяОкончанияСмены": "2024-01-31T08:00:00",
+                }
+            ],
         )
 
         assert response.status_code == 422
-        assert "ekn_code" in response.json()["detail"][0]["loc"]
+        assert "КодЕКН" in response.json()["detail"][0]["loc"]
 
     ##########################################
     # 2. GET /batches/{id}
@@ -185,7 +202,7 @@ class TestBatches:
         assert response.json()["is_closed"] == create_batch.is_closed
 
     @pytest.mark.asyncio
-    async def test_batch_batch_close(self, client: AsyncClient, create_batch):
+    async def test_patch_batch_close(self, client: AsyncClient, create_batch):
         """Тест закрытия партии"""
         response = await client.patch(
             f"/api/v1/batches/{create_batch.id}", json={"is_closed": True}
@@ -196,7 +213,7 @@ class TestBatches:
         assert response.json()["closed_at"] is not None
 
     @pytest.mark.asyncio
-    async def test_batch_batch_open(self, client: AsyncClient, create_batch):
+    async def test_patch_batch_open(self, client: AsyncClient, create_batch):
         """Тест открытия партии"""
         response = await client.patch(
             f"/api/v1/batches/{create_batch.id}", json={"is_closed": True}
@@ -219,24 +236,26 @@ class TestBatches:
     ):
         """Тест обновления номера партии на уже сущестующий"""
         batch = await client.post(
-            "/api/v1/batches/",
-            json={
-                "task_description": "Изготовить 500 гаек М8",
-                "work_center_id": create_workcenter.id,
-                "shift": "2 смена",
-                "team": "Бригада Петрова",
-                "batch_number": 22223,
-                "batch_date": "2024-01-30",
-                "nomenclature": "Гайка М8",
-                "ekn_code": "EKN-12346",
-                "shift_start": "2024-01-30T20:00:00",
-                "shift_end": "2024-01-31T08:00:00",
-                "is_closed": False,
-            },
-        )
-
+        "/api/v1/batches/",
+        json=[
+            {
+                "СтатусЗакрытия": False,
+                "ПредставлениеЗаданияНаСмену": "Изготовить 500 гаек М8",
+                "РабочийЦентр": create_workcenter.name,
+                "Смена": "2 смена",
+                "Бригада": "Бригада Петрова",
+                "НомерПартии": 22223,
+                "ДатаПартии": "2024-01-30",
+                "Номенклатура": "Гайка М8",
+                "КодЕКН": "ABC-12346",
+                "ИдентификаторРЦ": create_workcenter.identifier,
+                "ДатаВремяНачалаСмены": "2024-01-30T20:00:00",
+                "ДатаВремяОкончанияСмены": "2024-01-31T08:00:00",
+            }
+        ],
+    )
         response = await client.patch(
-            f"/api/v1/batches/{batch.json()['id']}", json={"batch_number": 22222}
+            f"/api/v1/batches/{batch.json()[0]['id']}", json={"batch_number": 22222}
         )
 
         assert response.status_code == 400
@@ -264,24 +283,27 @@ class TestBatches:
     ):
         """Тест получения списка партий по is_closed"""
         batch = await client.post(
-            "/api/v1/batches/",
-            json={
-                "task_description": "Изготовить 500 гаек М8",
-                "work_center_id": create_workcenter.id,
-                "shift": "2 смена",
-                "team": "Бригада Петрова",
-                "batch_number": 22223,
-                "batch_date": "2024-01-30",
-                "nomenclature": "Гайка М8",
-                "ekn_code": "EKN-12346",
-                "shift_start": "2024-01-30T20:00:00",
-                "shift_end": "2024-01-31T08:00:00",
-                "is_closed": False,
-            },
-        )
+        "/api/v1/batches/",
+        json=[
+            {
+                "СтатусЗакрытия": False,
+                "ПредставлениеЗаданияНаСмену": "Изготовить 500 гаек М8",
+                "РабочийЦентр": create_workcenter.name,
+                "Смена": "2 смена",
+                "Бригада": "Бригада Петрова",
+                "НомерПартии": 22223,
+                "ДатаПартии": "2024-01-30",
+                "Номенклатура": "Гайка М8",
+                "КодЕКН": "ABC-12346",
+                "ИдентификаторРЦ": create_workcenter.identifier,
+                "ДатаВремяНачалаСмены": "2024-01-30T20:00:00",
+                "ДатаВремяОкончанияСмены": "2024-01-31T08:00:00",
+            }
+        ],
+    )
 
         close_batch = await client.patch(
-            f"/api/v1/batches/{batch.json()['id']}", json={"is_closed": True}
+            f"/api/v1/batches/{batch.json()[0]['id']}", json={"is_closed": True}
         )
 
         response = await client.get("/api/v1/batches/?is_closed=false")
@@ -295,22 +317,25 @@ class TestBatches:
     ):
         """Тест получения списка партий по shift"""
         batch = await client.post(
-            "/api/v1/batches/",
-            json={
-                "task_description": "Изготовить 500 гаек М8",
-                "work_center_id": create_workcenter.id,
-                "shift": "1 смена",
-                "team": "Бригада Петрова",
-                "batch_number": 22223,
-                "batch_date": "2024-01-30",
-                "nomenclature": "Гайка М8",
-                "ekn_code": "EKN-12346",
-                "shift_start": "2024-01-30T20:00:00",
-                "shift_end": "2024-01-31T08:00:00",
-                "is_closed": False,
-            },
-        )
-
+        "/api/v1/batches/",
+        json=[
+            {
+                "СтатусЗакрытия": False,
+                "ПредставлениеЗаданияНаСмену": "Изготовить 500 гаек М8",
+                "РабочийЦентр": create_workcenter.name,
+                "Смена": "1 смена",
+                "Бригада": "Бригада Петрова",
+                "НомерПартии": 22223,
+                "ДатаПартии": "2024-01-30",
+                "Номенклатура": "Гайка М8",
+                "КодЕКН": "ABC-12346",
+                "ИдентификаторРЦ": create_workcenter.identifier,
+                "ДатаВремяНачалаСмены": "2024-01-30T20:00:00",
+                "ДатаВремяОкончанияСмены": "2024-01-31T08:00:00",
+            }
+        ],
+    )
+        
         response = await client.get("/api/v1/batches/?shift=1 смена")
         assert response.status_code == 200
         assert len(response.json()["items"]) == 1

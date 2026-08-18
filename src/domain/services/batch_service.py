@@ -8,7 +8,7 @@ from src.data.models.product import Product
 from src.data.repositories.batch_repository import BatchRepository
 from src.data.repositories.product_repository import ProductRepository
 from src.data.repositories.workcenter_repository import WorkCenterRepository
-from src.domain.schemas.batch import BatchCreate, BatchListRequest, BatchUpdate
+from src.domain.schemas.batch import BatchCreate, BatchCreateIntegration, BatchListRequest, BatchUpdate
 from src.domain.services.webhook_service import WebhookService
 
 
@@ -82,6 +82,36 @@ class BatchService:
         except Exception:
             await self.session.rollback()
             raise
+
+    async def create_from_integration(
+        self,
+        data: BatchCreateIntegration,
+    ) -> Batch:
+
+        work_center = await self.wc_repo.get_by_identifier(
+            data.work_center_identifier
+        )
+
+        if work_center is None:
+            raise ValueError(
+                f"Work center '{data.work_center_identifier}' not found"
+            )
+
+        batch_data = {
+            "is_closed": data.is_closed,
+            "task_description": data.task_description,
+            "work_center_id": work_center.id,
+            "shift": data.shift,
+            "team": data.team,
+            "batch_number": data.batch_number,
+            "batch_date": data.batch_date,
+            "nomenclature": data.nomenclature,
+            "ekn_code": data.ekn_code,
+            "shift_start": data.shift_start,
+            "shift_end": data.shift_end,
+        }
+
+        return await self.create(BatchCreate(**batch_data))
 
     ##########################################
     # ОБНОВЛЕНИЕ
