@@ -90,7 +90,6 @@ async def aggregate_products_batch(self, batch_id: int, codes: list[str]):
         }
 
 
-# TODO: import_batches_from_file
 @celery_app.task(bind=True, max_retries=1)
 async def import_batches_from_file(self, file_url: str, object_name: str):
     """

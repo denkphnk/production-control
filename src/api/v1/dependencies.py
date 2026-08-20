@@ -1,6 +1,7 @@
 from fastapi import Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from src.domain.services.analytics_service import AnalyticsService
 from src.core.database import AsyncSessionLocal
 from src.domain.services.batch_service import BatchService
 from src.domain.services.product_service import ProductService
@@ -40,3 +41,9 @@ async def get_report_service(
     session: AsyncSession = Depends(get_db),
 ) -> ReportService:
     return ReportService(session)
+
+
+async def get_analytics_service(
+    session: AsyncSession = Depends(get_db),
+) -> AnalyticsService:
+    return AnalyticsService(session)
