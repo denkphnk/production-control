@@ -1,7 +1,11 @@
+import json
 import os
+
 from typing import List
 
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, status
+
+from src.core.cache import redis
 
 from src.api.v1.dependencies import get_batch_service, get_report_service
 from src.api.v1.schemas.batch import (
@@ -56,16 +60,32 @@ async def list_batches(
     service: BatchService = Depends(get_batch_service),
 ):
     """Возвращает список партий с динамическими фильтрами и пагинацией"""
+    params = data.model_dump()
+
+    cache_key = "batches_list:" + json.dumps(
+            params,
+            sort_keys=True,
+            default=str,
+        )
+
+    cached = await redis.get(cache_key)
+
+    if cached:
+        return json.loads(cached)
+
     batches, total = await service.get_list(data)
 
-    response_batches = [
-        BatchListItemResponse.model_validate(batch) for batch in batches
-    ]
+    response = PaginatedBatchResponse.create(items=batches, total=total, offset=data.offset, limit=data.limit)
 
-    return PaginatedBatchResponse.create(
-        items=response_batches, total=total, offset=data.offset, limit=data.limit
+    payload = response.model_dump(mode='json')
+
+    await redis.set(
+        cache_key,
+        json.dumps(payload),
+        ex=60
     )
 
+    return response
 
 ##########################################
 # СТАТИСТИКА
