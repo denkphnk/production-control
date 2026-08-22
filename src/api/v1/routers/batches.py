@@ -1,6 +1,6 @@
 import json
 import os
-from typing import List
+
 
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, status
 from redis.asyncio import Redis
