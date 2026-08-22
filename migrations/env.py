@@ -17,12 +17,11 @@ from sqlalchemy.ext.asyncio import async_engine_from_config
 # Импортировать config и Base
 from src.core.config import settings
 from src.core.database import Base
-
 from src.data.models.batch import Batch
 from src.data.models.product import Product
-from src.data.models.workcenter import WorkCenter
 from src.data.models.report import Report
-from src.data.models.webhook import WebhookSubscription, WebhookDelivery
+from src.data.models.webhook import WebhookDelivery, WebhookSubscription
+from src.data.models.workcenter import WorkCenter
 
 # this is the Alembic Config object
 config = context.config

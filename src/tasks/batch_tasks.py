@@ -10,7 +10,7 @@ from openpyxl.utils import get_column_letter
 
 from src.api.v1.schemas.batch import BatchListRequest
 from src.celery_app import celery_app
-from src.core.cache import redis
+from src.core.cache import create_redis
 from src.core.database import AsyncSessionLocal
 from src.domain.services.analytics_service import AnalyticsService
 from src.domain.services.batch_service import BatchService
@@ -307,15 +307,20 @@ async def auto_close_expired_batches():
 
 @celery_app.task
 async def update_cached_statistics():
-    async with AsyncSessionLocal() as session:
-        analytic_service = AnalyticsService(session)
-        stats = await analytic_service.get_dashboard_statistics()
+    redis = create_redis()
+    try:
+        async with AsyncSessionLocal() as session:
+            analytic_service = AnalyticsService(session)
+            stats = await analytic_service.get_dashboard_statistics()
 
-        stats["cached_at"] = datetime.now(timezone.utc).isoformat()
+            stats["cached_at"] = datetime.now(timezone.utc).isoformat()
 
-        await redis.set("dashboard_stats", json.dumps(stats), ex=300)
+            await redis.set("dashboard_stats", json.dumps(stats), ex=300)
 
-        return stats
+            return stats
+
+    finally:
+        redis.aclose()
 
 
 @celery_app.task(bind=True, max_retries=3)

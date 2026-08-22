@@ -1,11 +1,9 @@
 import json
 import os
-
 from typing import List
 
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, status
-
-from src.core.cache import redis
+from redis.asyncio import Redis
 
 from src.api.v1.dependencies import get_batch_service, get_report_service
 from src.api.v1.schemas.batch import (
@@ -20,6 +18,7 @@ from src.api.v1.schemas.batch import (
     ProductInBatchResponse,
 )
 from src.api.v1.schemas.report import BatchExportRequest, ReportResponse
+from src.core.cache import get_redis
 from src.domain.services.batch_service import BatchService
 from src.domain.services.report_service import ReportService
 from src.storage.minio_service import minio_service
@@ -35,15 +34,18 @@ batches_router = APIRouter(prefix="/api/v1/batches", tags=["batches"])
     response_model=BatchFullResponse,
     responses={404: {"description": "Batch not found"}},
 )
-async def get_batch(batch_id: int, service: BatchService = Depends(get_batch_service)):
+async def get_batch(
+    batch_id: int,
+    service: BatchService = Depends(get_batch_service),
+    redis: Redis = Depends(get_redis),
+):
     """Получение партии по ID"""
-    cache_key = f'batch_detail:{batch_id}'
+    cache_key = f"batch_detail:{batch_id}"
 
     cached = await redis.get(cache_key)
 
     if cached:
         return json.loads(cached)
-
 
     batch = await service.get_by_id(batch_id)
     if not batch:
@@ -51,9 +53,8 @@ async def get_batch(batch_id: int, service: BatchService = Depends(get_batch_ser
             status_code=status.HTTP_404_NOT_FOUND, detail="Batch not found"
         )
 
-
     response = BatchFullResponse.model_validate(batch)
-    payload = response.model_dump(mode='json')
+    payload = response.model_dump(mode="json")
     await redis.set(cache_key, json.dumps(payload), ex=600)
     return response
 
@@ -69,15 +70,16 @@ async def get_batch(batch_id: int, service: BatchService = Depends(get_batch_ser
 async def list_batches(
     data: BatchListRequest = Depends(),
     service: BatchService = Depends(get_batch_service),
+    redis: Redis = Depends(get_redis),
 ):
     """Возвращает список партий с динамическими фильтрами и пагинацией"""
     params = data.model_dump()
 
     cache_key = "batches_list:" + json.dumps(
-            params,
-            sort_keys=True,
-            default=str,
-        )
+        params,
+        sort_keys=True,
+        default=str,
+    )
 
     cached = await redis.get(cache_key)
 
@@ -86,17 +88,16 @@ async def list_batches(
 
     batches, total = await service.get_list(data)
 
-    response = PaginatedBatchResponse.create(items=batches, total=total, offset=data.offset, limit=data.limit)
-
-    payload = response.model_dump(mode='json')
-
-    await redis.set(
-        cache_key,
-        json.dumps(payload),
-        ex=60
+    response = PaginatedBatchResponse.create(
+        items=batches, total=total, offset=data.offset, limit=data.limit
     )
 
+    payload = response.model_dump(mode="json")
+
+    await redis.set(cache_key, json.dumps(payload), ex=60)
+
     return response
+
 
 ##########################################
 # СТАТИСТИКА
@@ -107,19 +108,21 @@ async def list_batches(
     status_code=status.HTTP_200_OK,
 )
 async def get_statistics(
-    batch_id: int, service: BatchService = Depends(get_batch_service)
+    batch_id: int,
+    service: BatchService = Depends(get_batch_service),
+    redis: Redis = Depends(get_redis),
 ):
     """Возвращает статистику агрегации"""
-    cache_key = f'batch_stats:{batch_id}'
+    cache_key = f"batch_stats:{batch_id}"
     cached = await redis.get(cache_key)
 
     if cached:
         return json.loads(cached)
-    
+
     stats = await service.get_full_statistics(batch_id)
     response_stats = BatchStatisticsResponse(**stats)
 
-    payload = response_stats.model_dump(mode='json')
+    payload = response_stats.model_dump(mode="json")
 
     await redis.set(cache_key, json.dumps(payload), ex=300)
     return response_stats
@@ -129,10 +132,11 @@ async def get_statistics(
 # СОЗДАНИЕ ПАРТИИ
 ##########################################
 @batches_router.post(
-    "/", response_model=List[BatchDetailResponse], status_code=status.HTTP_201_CREATED
+    "/", response_model=list[BatchDetailResponse], status_code=status.HTTP_201_CREATED
 )
 async def create_batch(
-    data: List[BatchCreateIntegration], service: BatchService = Depends(get_batch_service)
+    data: list[BatchCreateIntegration],
+    service: BatchService = Depends(get_batch_service),
 ):
     """Создание новой партии"""
     try:
@@ -142,10 +146,7 @@ async def create_batch(
             batch = await service.create_from_integration(item)
             batches.append(batch)
 
-        return [
-            BatchDetailResponse.model_validate(batch)
-            for batch in batches
-        ]
+        return [BatchDetailResponse.model_validate(batch) for batch in batches]
     except ValueError as e:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
 

@@ -1,25 +1,38 @@
 from datetime import date, datetime, timezone
 
-import pytest
+import pytest_asyncio
 from httpx import ASGITransport, AsyncClient
+from redis.asyncio import Redis
 from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 from sqlalchemy.pool import NullPool
 
 from src.api.v1.dependencies import get_db
+from src.core.cache import get_redis
 from src.core.config import settings
 from src.core.database import Base
 from src.main import app
 
-engine = create_async_engine(str(settings.DATABASE_URL), poolclass=NullPool)
-TestAsyncSessionLocal = async_sessionmaker(engine, expire_on_commit=False)
+
+@pytest_asyncio.fixture
+async def engine():
+    engine = create_async_engine(
+        str(settings.DATABASE_URL),
+        poolclass=NullPool,
+    )
+
+    yield engine
+
+    await engine.dispose()
 
 
-@pytest.fixture
-async def db_session():
+@pytest_asyncio.fixture
+async def db_session(engine):
     """Создает сессию"""
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.drop_all)
         await conn.run_sync(Base.metadata.create_all)
+
+    TestAsyncSessionLocal = async_sessionmaker(engine, expire_on_commit=False)
 
     async with TestAsyncSessionLocal() as session:
         yield session
@@ -28,14 +41,30 @@ async def db_session():
         await conn.run_sync(Base.metadata.drop_all)
 
 
-@pytest.fixture
-async def client(db_session):
+@pytest_asyncio.fixture
+async def redis_client():
+    client = Redis.from_url(
+        str(settings.REDIS_URL),
+        decode_responses=True,
+    )
+
+    yield client
+
+    await client.aclose()
+
+
+@pytest_asyncio.fixture
+async def client(db_session, redis_client):
     """Создает клиента"""
 
     async def override_get_db():
         yield db_session
 
+    def override_get_redis():
+        return redis_client
+
     app.dependency_overrides[get_db] = override_get_db
+    app.dependency_overrides[get_redis] = override_get_redis
 
     async with AsyncClient(
         transport=ASGITransport(app=app), base_url="http://test"
@@ -45,7 +74,7 @@ async def client(db_session):
     app.dependency_overrides.clear()
 
 
-@pytest.fixture
+@pytest_asyncio.fixture
 async def create_workcenter(db_session):
     """Создает тестовый РЦ"""
     from src.data.models.workcenter import WorkCenter
@@ -57,7 +86,7 @@ async def create_workcenter(db_session):
     return wc
 
 
-@pytest.fixture
+@pytest_asyncio.fixture
 async def create_batch(db_session, create_workcenter):
     """Создает тестовую партию"""
     from src.data.models.batch import Batch
@@ -82,7 +111,7 @@ async def create_batch(db_session, create_workcenter):
     return batch
 
 
-@pytest.fixture
+@pytest_asyncio.fixture
 async def create_product(db_session, create_batch):
     from src.data.models.product import Product
 

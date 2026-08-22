@@ -3,10 +3,10 @@ from datetime import datetime, timedelta, timezone
 
 from src.celery_app import celery_app
 from src.core.database import AsyncSessionLocal
+from src.data.repositories.report_repository import ReportRepository
 from src.domain.services.batch_service import BatchService
 from src.domain.services.product_service import ProductService
 from src.domain.services.report_service import ReportService
-from src.data.repositories.report_repository import ReportRepository
 from src.domain.services.webhook_service import WebhookService
 from src.storage.minio_service import minio_service
 
@@ -255,7 +255,6 @@ async def generate_batch_report(
         finally:
             if file_name and os.path.exists(file_name):
                 os.remove(file_name)
-
 
 
 @celery_app.task(bind=True, max_retries=3)

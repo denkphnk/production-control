@@ -86,6 +86,7 @@ class BatchCreate(BatchBase):
 
     is_closed: bool = Field(default=False, description="Статус закрытия смены")
 
+
 class BatchCreateIntegration(BaseModel):
     is_closed: bool = Field(
         default=False,
@@ -206,12 +207,11 @@ class BatchCreateIntegration(BaseModel):
     @classmethod
     def validate_ekn_code(cls, value: str) -> str:
         import re
+
         value = value.upper()
 
         if not re.fullmatch(r"^[A-Z]{3}-\d{5}$", value):
-            raise ValueError(
-                'EKN code must be like "ABC-12345"'
-            )
+            raise ValueError('EKN code must be like "ABC-12345"')
         return value
 
 

@@ -3,7 +3,6 @@ from src.core.database import AsyncSessionLocal
 from src.domain.services.webhook_service import WebhookService
 
 
-
 @celery_app.task(bind=True, max_retries=3)
 async def send_webhook_delivery(self, delivery_id: int):
     try:
@@ -19,7 +18,6 @@ async def send_webhook_delivery(self, delivery_id: int):
         countdown = 30 * (2**self.request.retries)
 
         raise self.retry(exc=exc, countdown=countdown)
-
 
 
 @celery_app.task(bind=True, max_retries=3)

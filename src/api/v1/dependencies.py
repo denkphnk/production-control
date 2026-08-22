@@ -1,8 +1,10 @@
 from fastapi import Depends
+from redis.asyncio import Redis
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from src.domain.services.analytics_service import AnalyticsService
+from src.core.cache import get_redis
 from src.core.database import AsyncSessionLocal
+from src.domain.services.analytics_service import AnalyticsService
 from src.domain.services.batch_service import BatchService
 from src.domain.services.product_service import ProductService
 from src.domain.services.report_service import ReportService
@@ -15,8 +17,10 @@ async def get_db():
         yield session
 
 
-async def get_batch_service(session: AsyncSession = Depends(get_db)) -> BatchService:
-    return BatchService(session)
+async def get_batch_service(
+    session: AsyncSession = Depends(get_db), redis: Redis = Depends(get_redis)
+) -> BatchService:
+    return BatchService(session=session, redis=redis)
 
 
 async def get_product_service(

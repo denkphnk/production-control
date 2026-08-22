@@ -1,3 +1,5 @@
+from contextlib import asynccontextmanager
+
 from fastapi import FastAPI
 
 from src.api.v1.routers.analytics import analytics_router
@@ -6,8 +8,21 @@ from src.api.v1.routers.products import products_router
 from src.api.v1.routers.reports import reports_router
 from src.api.v1.routers.tasks import async_batches_router, tasks_router
 from src.api.v1.routers.webhooks import webhook_router
+from src.core.cache import create_redis
 
-app = FastAPI(title="Production Control API", version="1.0.0")
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    app.state.redis = create_redis()
+
+    try:
+        await app.state.redis.ping()
+        yield
+    finally:
+        await app.state.redis.aclose()
+
+
+app = FastAPI(title="Production Control API", version="1.0.0", lifespan=lifespan)
 app.include_router(batches_router)
 app.include_router(async_batches_router)
 app.include_router(products_router)

@@ -1,23 +1,30 @@
 from datetime import datetime, timezone
 from typing import Any
 
+from redis.asyncio import Redis
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from src.core.cache import redis
 from src.data.models.batch import Batch
 from src.data.models.product import Product
 from src.data.repositories.batch_repository import BatchRepository
 from src.data.repositories.product_repository import ProductRepository
 from src.data.repositories.workcenter_repository import WorkCenterRepository
-from src.domain.schemas.batch import BatchCreate, BatchCreateIntegration, BatchListRequest, BatchUpdate
+from src.domain.schemas.batch import (
+    BatchCreate,
+    BatchCreateIntegration,
+    BatchListRequest,
+    BatchUpdate,
+)
 from src.domain.services.webhook_service import WebhookService
 
 
 class BatchService:
     """Сервис для работы с партями"""
 
-    def __init__(self, session: AsyncSession):
+    def __init__(self, session: AsyncSession, redis: Redis):
         self.session = session
+        self.redis = redis
+
         self.batch_repo = BatchRepository(session)
         self.product_repo = ProductRepository(session)
         self.wc_repo = WorkCenterRepository(session)
@@ -63,9 +70,9 @@ class BatchService:
             await self.session.commit()
             await self.session.refresh(batch)
 
-            await redis.delete('dashboard_stats')
-            async for key in redis.scan_iter(match='batches_list:*'):
-                await redis.delete(key)
+            await self.redis.delete("dashboard_stats")
+            async for key in self.redis.scan_iter(match="batches_list:*"):
+                await self.redis.delete(key)
 
             batch_with_relations = await self.batch_repo.get_by_id_with_relations(
                 batch.id
@@ -93,14 +100,10 @@ class BatchService:
         data: BatchCreateIntegration,
     ) -> Batch:
 
-        work_center = await self.wc_repo.get_by_identifier(
-            data.work_center_identifier
-        )
+        work_center = await self.wc_repo.get_by_identifier(data.work_center_identifier)
 
         if work_center is None:
-            raise ValueError(
-                f"Work center '{data.work_center_identifier}' not found"
-            )
+            raise ValueError(f"Work center '{data.work_center_identifier}' not found")
 
         batch_data = {
             "is_closed": data.is_closed,
@@ -161,11 +164,11 @@ class BatchService:
             await self.session.commit()
             await self.session.refresh(batch)
 
-            await redis.delete('dashboard_stats')
-            async for key in redis.scan_iter(match='batches_list:*'):
-                await redis.delete(key)
-            await redis.delete(f'batch_detail:{batch_id}')
-            await redis.delete(f'batch_stats:{batch_id}')
+            await self.redis.delete("dashboard_stats")
+            async for key in self.redis.scan_iter(match="batches_list:*"):
+                await self.redis.delete(key)
+            await self.redis.delete(f"batch_detail:{batch_id}")
+            await self.redis.delete(f"batch_stats:{batch_id}")
 
             batch_with_relations = await self.batch_repo.get_by_id_with_relations(
                 batch_id
@@ -203,11 +206,11 @@ class BatchService:
             await self.session.commit()
             await self.session.refresh(batch)
 
-            await redis.delete('dashboard_stats')
-            async for key in redis.scan_iter(match='batches_list:*'):
-                await redis.delete(key)
-            await redis.delete(f'batch_detail:{batch_id}')
-            await redis.delete(f'batch_stats:{batch_id}')
+            await self.redis.delete("dashboard_stats")
+            async for key in self.redis.scan_iter(match="batches_list:*"):
+                await self.redis.delete(key)
+            await self.redis.delete(f"batch_detail:{batch_id}")
+            await self.redis.delete(f"batch_stats:{batch_id}")
 
             batch_with_relations = await self.batch_repo.get_by_id_with_relations(
                 batch_id
@@ -260,9 +263,9 @@ class BatchService:
             await self.session.commit()
             await self.session.refresh(product_update)
 
-            await redis.delete('dashboard_stats')
-            await redis.delete(f'batch_detail:{batch_id}')
-            await redis.delete(f'batch_stats:{batch_id}')
+            await self.redis.delete("dashboard_stats")
+            await self.redis.delete(f"batch_detail:{batch_id}")
+            await self.redis.delete(f"batch_stats:{batch_id}")
 
             await self.webhook_service.send_event(
                 "product_aggregated",
@@ -307,12 +310,12 @@ class BatchService:
         )
         await self.session.commit()
 
-        await redis.delete('dashboard_stats')
-        async for key in redis.scan_iter(match='batches_list:*'):
-            await redis.delete(key)
+        await self.redis.delete("dashboard_stats")
+        async for key in self.redis.scan_iter(match="batches_list:*"):
+            await self.redis.delete(key)
         for batch_id in batches:
-            await redis.delete(f'batch_detail:{batch_id}')
-            await redis.delete(f'batch_stats:{batch_id}')
+            await self.redis.delete(f"batch_detail:{batch_id}")
+            await self.redis.delete(f"batch_stats:{batch_id}")
 
         return len(closed)
 
