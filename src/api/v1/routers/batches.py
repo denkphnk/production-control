@@ -10,11 +10,9 @@ from src.core.cache import redis
 from src.api.v1.dependencies import get_batch_service, get_report_service
 from src.api.v1.schemas.batch import (
     AggregateProduct,
-    BatchCreate,
     BatchCreateIntegration,
     BatchDetailResponse,
     BatchFullResponse,
-    BatchListItemResponse,
     BatchListRequest,
     BatchStatisticsResponse,
     BatchUpdate,

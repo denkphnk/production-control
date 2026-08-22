@@ -3,6 +3,7 @@ from typing import Any
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from src.core.cache import redis
 from src.data.models.batch import Batch
 from src.data.models.product import Product
 from src.data.repositories.batch_repository import BatchRepository
@@ -61,6 +62,10 @@ class BatchService:
             batch = await self.batch_repo.create(batch_data)
             await self.session.commit()
             await self.session.refresh(batch)
+
+            await redis.delete('dashboard_stats')
+            async for key in redis.scan_iter(match='batches_list:*'):
+                await redis.delete(key)
 
             batch_with_relations = await self.batch_repo.get_by_id_with_relations(
                 batch.id
@@ -155,6 +160,13 @@ class BatchService:
             batch = await self.batch_repo.update(batch_id, update_data)
             await self.session.commit()
             await self.session.refresh(batch)
+
+            await redis.delete('dashboard_stats')
+            async for key in redis.scan_iter(match='batches_list:*'):
+                await redis.delete(key)
+            await redis.delete(f'batch_detail:{batch_id}')
+            await redis.delete(f'batch_stats:{batch_id}')
+
             batch_with_relations = await self.batch_repo.get_by_id_with_relations(
                 batch_id
             )
@@ -190,6 +202,13 @@ class BatchService:
             stats = await self.batch_repo.get_batch_aggregation_stats(batch_id)
             await self.session.commit()
             await self.session.refresh(batch)
+
+            await redis.delete('dashboard_stats')
+            async for key in redis.scan_iter(match='batches_list:*'):
+                await redis.delete(key)
+            await redis.delete(f'batch_detail:{batch_id}')
+            await redis.delete(f'batch_stats:{batch_id}')
+
             batch_with_relations = await self.batch_repo.get_by_id_with_relations(
                 batch_id
             )
@@ -240,6 +259,11 @@ class BatchService:
             )
             await self.session.commit()
             await self.session.refresh(product_update)
+
+            await redis.delete('dashboard_stats')
+            await redis.delete(f'batch_detail:{batch_id}')
+            await redis.delete(f'batch_stats:{batch_id}')
+
             await self.webhook_service.send_event(
                 "product_aggregated",
                 {
@@ -282,6 +306,13 @@ class BatchService:
             ids=batches, data={"is_closed": True}
         )
         await self.session.commit()
+
+        await redis.delete('dashboard_stats')
+        async for key in redis.scan_iter(match='batches_list:*'):
+            await redis.delete(key)
+        for batch_id in batches:
+            await redis.delete(f'batch_detail:{batch_id}')
+            await redis.delete(f'batch_stats:{batch_id}')
 
         return len(closed)
 
