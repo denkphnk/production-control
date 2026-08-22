@@ -39,12 +39,25 @@ batches_router = APIRouter(prefix="/api/v1/batches", tags=["batches"])
 )
 async def get_batch(batch_id: int, service: BatchService = Depends(get_batch_service)):
     """Получение партии по ID"""
+    cache_key = f'batch_detail:{batch_id}'
+
+    cached = await redis.get(cache_key)
+
+    if cached:
+        return json.loads(cached)
+
+
     batch = await service.get_by_id(batch_id)
     if not batch:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail="Batch not found"
         )
-    return BatchFullResponse.model_validate(batch)
+
+
+    response = BatchFullResponse.model_validate(batch)
+    payload = response.model_dump(mode='json')
+    await redis.set(cache_key, json.dumps(payload), ex=600)
+    return response
 
 
 ##########################################
