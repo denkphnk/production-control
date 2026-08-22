@@ -112,9 +112,18 @@ async def get_statistics(
     batch_id: int, service: BatchService = Depends(get_batch_service)
 ):
     """Возвращает статистику агрегации"""
+    cache_key = f'batch_stats:{batch_id}'
+    cached = await redis.get(cache_key)
 
+    if cached:
+        return json.loads(cached)
+    
     stats = await service.get_full_statistics(batch_id)
     response_stats = BatchStatisticsResponse(**stats)
+
+    payload = response_stats.model_dump(mode='json')
+
+    await redis.set(cache_key, json.dumps(payload), ex=300)
     return response_stats
 
 
