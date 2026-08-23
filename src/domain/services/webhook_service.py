@@ -19,7 +19,7 @@ class WebhookService:
     def __init__(self, session: AsyncSession):
         self.session = session
         self.webhook_repo = WebhookRepository(session)
-        self.http_client = httpx.AsyncClient(timeout=10.0)
+
 
     async def get_by_id(self, subscription_id: int) -> WebhookSubscription:
         return await self.webhook_repo.get_by_id(subscription_id)
@@ -38,7 +38,7 @@ class WebhookService:
         try:
             subscription = await self.webhook_repo.create(data)
             await self.session.commit()
-            self.session.refresh(subscription)
+            await self.session.refresh(subscription)
             return subscription
         except Exception:
             await self.session.rollback()
@@ -148,35 +148,42 @@ class WebhookService:
     ) -> None:
         """Отправляет событие подписчику"""
         try:
-            signature = self._create_signature(payload, subscription.secret_key)
+            async with httpx.AsyncClient(timeout=10.0) as http_client:
+                signature = self._create_signature(payload, subscription.secret_key)
 
-            response = await self.http_client.post(
-                subscription.url,
-                json=payload,
-                headers={
-                    "X-Webhook-Signature": signature,
-                    "Content-Type": "application/json",
-                },
-                timeout=subscription.timeout,
-            )
+                response = await http_client.post(
+                    subscription.url,
+                    json=payload,
+                    headers={
+                        "X-Webhook-Signature": signature,
+                        "Content-Type": "application/json",
+                    },
+                    timeout=subscription.timeout,
+                )
 
-            if 200 <= response.status_code < 300:
-                status = "success"
-            else:
-                status = "failed"
-            response_body = response.text[:500]
+                if 200 <= response.status_code < 300:
+                    status = "success"
+                else:
+                    status = "failed"
+                response_body = response.text[:500]
 
-            await self._save_delivery_result(
-                delivery_id=delivery.id,
-                status=status,
-                response_status=response.status_code,
-                response_body=response_body,
-            )
+                await self._save_delivery_result(
+                    delivery_id=delivery.id,
+                    status=status,
+                    response_status=response.status_code,
+                    response_body=response_body,
+                )
         except httpx.TimeoutException:
             await self._save_delivery_result(
                 delivery_id=delivery.id,
                 status="failed",
                 error_message=f"Timeout after {subscription.timeout}s",
+            )
+        except httpx.RequestError as e:
+            await self._save_delivery_result(
+                delivery_id=delivery.id,
+                status="failed",
+                error_message=str(e),
             )
 
     def _create_signature(self, payload: dict[str, Any], secret_key: str) -> str:

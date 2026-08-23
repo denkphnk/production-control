@@ -15,7 +15,7 @@ class WebhookSubscription(Base):
     events: Mapped[list[str]] = mapped_column(
         ARRAY(String), nullable=False
     )  # ["batch_created", "batch_closed"]
-    secret_key: Mapped[str] = mapped_column(nullable=True)
+    secret_key: Mapped[str] = mapped_column(nullable=False)
     is_active: Mapped[bool] = mapped_column(default=True)
     retry_count: Mapped[int] = mapped_column(default=3)
     timeout: Mapped[int] = mapped_column(default=10)  # секунды
