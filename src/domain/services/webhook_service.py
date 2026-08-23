@@ -20,7 +20,6 @@ class WebhookService:
         self.session = session
         self.webhook_repo = WebhookRepository(session)
 
-
     async def get_by_id(self, subscription_id: int) -> WebhookSubscription:
         return await self.webhook_repo.get_by_id(subscription_id)
 
