@@ -468,3 +468,27 @@ class AggregateProduct(BaseModel):
     """
 
     unique_code: str = Field(..., min_length=1, description="Уникальный код продукции")
+
+
+class CompareBatchesRequest(BaseModel):
+    batch_ids: list[int] = Field(..., min_length=2)
+
+
+class BatchComparisonItem(BaseModel):
+    batch_id: int
+    batch_number: int
+    total_products: int
+    aggregated: int
+    rate: float
+    duration_hours: float
+    products_per_hour: float
+
+
+class BatchComparisonAverage(BaseModel):
+    aggregation_rate: float
+    products_per_hour: float
+
+
+class CompareBatchesResponse(BaseModel):
+    comparison: list[BatchComparisonItem]
+    average: BatchComparisonAverage

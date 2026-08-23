@@ -4,6 +4,7 @@ from fastapi import APIRouter, Depends
 from redis.asyncio import Redis
 
 from src.api.v1.dependencies import get_analytics_service
+from src.api.v1.schemas.batch import CompareBatchesRequest, CompareBatchesResponse
 from src.core.cache import get_redis
 from src.domain.services.analytics_service import AnalyticsService
 
@@ -24,3 +25,11 @@ async def get_analytics_dashboard(
     await redis.set("dashboard_stats", json.dumps(statistics, default=str), ex=300)
 
     return statistics
+
+
+@analytics_router.post("/compare_batches", response_model=CompareBatchesResponse)
+async def compare_batches(
+    data: CompareBatchesRequest,
+    service: AnalyticsService = Depends(get_analytics_service),
+):
+    return await service.compare_batches(data.batch_ids)

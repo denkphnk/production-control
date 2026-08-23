@@ -375,3 +375,7 @@ class BatchListRequest(BatchFilters, PaginationParams):
     """
 
     model_config = ConfigDict(str_strip_whitespace=True, extra="forbid")
+
+
+class CompareBatchesRequest(BaseModel):
+    batch_ids: list[str] = Field(..., min_length=2)

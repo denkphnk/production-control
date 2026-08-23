@@ -125,12 +125,7 @@ class BatchRepository(BaseRepository[Batch]):
     async def get_batch_full_stats(self, batch_id: int) -> dict[str, Any]:
         batch = await self.get_by_id(batch_id)
         if not batch:
-            return {
-                "batch_info": {},
-                "production_stats": {},
-                "timeline": {},
-                "team_performance": {},
-            }
+            return None
 
         # BATCH_INFO
         batch_info = {

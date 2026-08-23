@@ -6,6 +6,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from src.data.repositories.analytics_repository import AnalyticsRepository
 from src.data.repositories.batch_repository import BatchRepository
 from src.data.repositories.product_repository import ProductRepository
+from src.domain.schemas.batch import CompareBatchesRequest
 
 
 class AnalyticsService:
@@ -109,3 +110,41 @@ class AnalyticsService:
             "by_shift": by_shift,
             "top_work_centers": top_wc,
         }
+
+    async def compare_batches(self, batch_ids: CompareBatchesRequest) -> dict[str, Any]:
+        comparison = []
+
+        for batch_id in batch_ids:
+            stats = await self.batch_repo.get_batch_full_stats(batch_id)
+
+            if not stats:
+                raise ValueError(f"Batch with id {batch_id} not found.")
+
+            batch_info = stats["batch_info"]
+            production_stats = stats["production_stats"]
+            timeline = stats["timeline"]
+            team_performance = stats["team_performance"]
+
+            comparison.append(
+                {
+                    "batch_id": batch_info["id"],
+                    "batch_number": batch_info["batch_number"],
+                    "total_products": production_stats["total_products"],
+                    "aggregated": production_stats["aggregated"],
+                    "rate": production_stats["aggregation_rate"],
+                    "duration_hours": timeline["shift_duration_hours"],
+                    "products_per_hour": timeline["products_per_hour"],
+                }
+            )
+
+        average = {
+            "aggregation_rate": round(
+                sum(item["rate"] for item in comparison) / len(comparison), 2
+            ),
+            "products_per_hour": round(
+                sum(item["products_per_hour"] for item in comparison) / len(comparison),
+                2,
+            ),
+        }
+
+        return {"comparison": comparison, "average": average}
