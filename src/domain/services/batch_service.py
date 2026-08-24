@@ -103,7 +103,12 @@ class BatchService:
         work_center = await self.wc_repo.get_by_identifier(data.work_center_identifier)
 
         if work_center is None:
-            raise ValueError(f"Work center '{data.work_center_identifier}' not found")
+            work_center = await self.wc_repo.create(
+                {
+                    'identifier': data.work_center_identifier,
+                    'name': data.work_center_name
+                }
+            )
 
         batch_data = {
             "is_closed": data.is_closed,
