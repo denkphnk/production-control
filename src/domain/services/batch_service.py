@@ -105,8 +105,8 @@ class BatchService:
         if work_center is None:
             work_center = await self.wc_repo.create(
                 {
-                    'identifier': data.work_center_identifier,
-                    'name': data.work_center_name
+                    "identifier": data.work_center_identifier,
+                    "name": data.work_center_name,
                 }
             )
 
