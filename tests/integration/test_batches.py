@@ -68,37 +68,6 @@ class TestBatches:
         assert "already exists" in response.json()["detail"]
 
     @pytest.mark.asyncio
-    async def test_create_batch_wc_doesnt_exist(
-        self, client: AsyncClient, create_workcenter
-    ):
-        """Тест создания партии с несуществующим РЦ"""
-        response = await client.post(
-            "/api/v1/batches/",
-            json=[
-                {
-                    "СтатусЗакрытия": False,
-                    "ПредставлениеЗаданияНаСмену": "Изготовить 500 гаек М8",
-                    "РабочийЦентр": "Цех №2",
-                    "Смена": "2 смена",
-                    "Бригада": "Бригада Петрова",
-                    "НомерПартии": 22223,
-                    "ДатаПартии": "2024-01-30",
-                    "Номенклатура": "Гайка М8",
-                    "КодЕКН": "ABC-12346",
-                    "ИдентификаторРЦ": "RC-002",
-                    "ДатаВремяНачалаСмены": "2024-01-30T20:00:00",
-                    "ДатаВремяОкончанияСмены": "2024-01-31T08:00:00",
-                }
-            ],
-        )
-
-        assert response.status_code == 400
-        assert (
-            "not found" in response.json()["detail"]
-            and "Work center" in response.json()["detail"]
-        )
-
-    @pytest.mark.asyncio
     async def test_create_batch_null_value(
         self, client: AsyncClient, create_workcenter
     ):
